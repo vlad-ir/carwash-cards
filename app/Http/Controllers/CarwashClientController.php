@@ -43,7 +43,7 @@ class CarwashClientController extends Controller
                             <form action="' . route('carwash_clients.destroy', $client->id) . '" method="POST" style="display:inline;">
                                 ' . csrf_field() . '
                                 ' . method_field('DELETE') . '
-                                <button type="submit" class="btn btn-sm btn-outline-danger delete-single" title="Удалить"><i class="fas fa-trash"></i></button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger delete-single" title="Удалить" data-short-name="' . htmlspecialchars($client->short_name) . '"><i class="fas fa-trash"></i></button>
                             </form>
                         </div>';
                 })

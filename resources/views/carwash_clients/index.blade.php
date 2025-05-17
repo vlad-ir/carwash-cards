@@ -9,36 +9,6 @@
             <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>
 
-        <!-- Toast контейнер -->
-        <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050;">
-            <div id="toastMessage" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="toast-header">
-                    <strong class="me-auto" id="toastTitle"></strong>
-                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-                <div class="toast-body" id="toastBody"></div>
-            </div>
-        </div>
-
-        <!-- Модальное окно подтверждения удаления -->
-        <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="confirmDeleteModalLabel">Подтверждение удаления</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p id="confirmDeleteMessage"></p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                        <button type="button" class="btn btn-danger" id="confirmDeleteButton">Удалить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <table id="clientsTable" class="table table-bordered">
             <thead>
             <tr>
@@ -124,40 +94,6 @@
                 // Хранилище выбранных ID
                 let selectedIds = [];
 
-                // Функция для показа toast
-                function showToast(title, message, type) {
-                    const toast = $('#toastMessage');
-                    const toastTitle = $('#toastTitle');
-                    const toastBody = $('#toastBody');
-
-                    toastTitle.text(title);
-                    toastBody.text(message);
-
-                    toast.removeClass('text-bg-success text-bg-danger');
-                    if (type === 'success') {
-                        toast.addClass('text-bg-success');
-                    } else {
-                        toast.addClass('text-bg-danger');
-                    }
-
-                    const bsToast = new bootstrap.Toast(toast);
-                    bsToast.show();
-                    setTimeout(() => bsToast.hide(), 3000);
-                }
-
-                // Функция для показа модального окна
-                function showConfirmModal(message, callback) {
-                    $('#confirmDeleteMessage').text(message);
-                    const modal = new bootstrap.Modal('#confirmDeleteModal');
-                    modal.show();
-
-                    // Очистка предыдущих обработчиков
-                    $('#confirmDeleteButton').off('click').on('click', function() {
-                        modal.hide();
-                        callback();
-                    });
-                }
-
                 // Инициализация DataTables
                 var table = $('#clientsTable').DataTable({
                     processing: true,
@@ -191,17 +127,16 @@
                         $(api.table().container()).find('div.dataTables_filter').append($filterBtn);
                     },
                     drawCallback: function() {
-                        // Восстановить выбранные чекбоксы
                         $('.select-row').each(function() {
                             $(this).prop('checked', selectedIds.includes($(this).val()));
                         });
                         updateSelectedCount();
 
-                        // Обработчик для кнопок удаления в столбце "Действия"
                         $('.delete-single').off('click').on('click', function(e) {
                             e.preventDefault();
                             const form = $(this).closest('form');
-                            showConfirmModal('Вы уверены, что хотите удалить этого клиента?', function() {
+                            const shortName = $(this).data('short-name');
+                            showConfirmModal(`Вы уверены, что хотите удалить клиента ${shortName}?`, function() {
                                 form.submit();
                             });
                         });
