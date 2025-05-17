@@ -3,48 +3,68 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCarwashClientRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     *
-     * @return bool
-     */
     public function authorize(): bool
     {
-        return true; // или установите соответствующие правила авторизации
+        return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array
-     */
     public function rules(): array
     {
+        $clientId = $this->route('carwash_client');
+
         return [
-            'short_name' => 'required|string|max:100',
-            'full_name' => 'required|string|max:255',
-            'email' => 'required|email|max:100',
-            'phone' => 'required|string|max:20',
-            'unp' => 'required|string|max:9',
-            'bank_account_number' => 'required|string|max:50',
-            'bank_bic' => 'required|string|max:20',
-            'status' => 'required|in:active,inactive,blocked',
-            'invoice_email_required' => 'required|boolean',
-            'invoice_email_date' => 'nullable|date',
-            'postal_address' => 'required|string|max:255',
-            'bank_postal_address' => 'required|string|max:255',
-            'bonus_cards' => 'nullable|array',
-            'bonus_cards.*.card_number' => 'required|string|max:20|unique:carwash_bonus_cards,card_number',
-            'bonus_cards.*.name' => 'required|string|max:100',
-            'bonus_cards.*.discount_percentage' => 'required|decimal:0,2',
-            'bonus_cards.*.balance' => 'required|date_format:H:i:s',
-            'bonus_cards.*.status' => 'required|in:active,inactive,blocked',
-            'bonus_cards.*.car_license_plate' => 'nullable|string|max:20',
-            'bonus_cards.*.rate_per_minute' => 'required|decimal:0,2',
-            'bonus_cards.*.invoice_required' => 'required|boolean',
+            'short_name' => ['required', 'string', 'max:100'],
+            'full_name' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('carwash_clients', 'email')->ignore($clientId),
+            ],
+            'unp' => [
+                'nullable',
+                'string',
+                'max:20',
+                Rule::unique('carwash_clients', 'unp')->ignore($clientId),
+            ],
+            'bank_account_number' => ['nullable', 'string', 'max:50'],
+            'bank_bic' => ['nullable', 'string', 'max:20'],
+            'status' => ['required', Rule::in(['active', 'blocked'])],
+            'invoice_email_required' => ['boolean'],
+            'invoice_email_day' => ['nullable', 'integer', 'min:1', 'max:31'],
+            'postal_address' => ['nullable', 'string', 'max:255'],
+            'bank_postal_address' => ['nullable', 'string', 'max:255'],
+            'contract' => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'short_name.required' => 'Краткое имя обязательно для заполнения.',
+            'short_name.max' => 'Краткое имя не должно превышать 100 символов.',
+            'full_name.required' => 'Полное имя обязательно для заполнения.',
+            'full_name.max' => 'Полное имя не должно превышать 255 символов.',
+            'email.required' => 'Email обязателен для заполнения.',
+            'email.email' => 'Введите корректный email.',
+            'email.max' => 'Email не должен превышать 255 символов.',
+            'email.unique' => 'Этот email уже зарегистрирован.',
+            'unp.max' => 'УНП не должен превышать 20 символов.',
+            'unp.unique' => 'Этот УНП уже зарегистрирован.',
+            'bank_account_number.max' => 'Номер банковского счета не должен превышать 50 символов.',
+            'bank_bic.max' => 'БИК банка не должен превышать 20 символов.',
+            'status.required' => 'Статус обязателен для выбора.',
+            'status.in' => 'Статус должен быть "Активен" или "Заблокирован".',
+            'invoice_email_day.integer' => 'День для отправки счета должен быть числом.',
+            'invoice_email_day.min' => 'День для отправки счета должен быть не менее 1.',
+            'invoice_email_day.max' => 'День для отправки счета должен быть не более 31.',
+            'postal_address.max' => 'Почтовый адрес не должен превышать 255 символов.',
+            'bank_postal_address.max' => 'Банковский почтовый адрес не должен превышать 255 символов.',
+            'contract.max' => 'Договор не должен превышать 255 символов.',
         ];
     }
 }

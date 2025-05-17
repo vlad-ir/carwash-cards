@@ -74,6 +74,7 @@
             .filter-panel.active {
                 right: 0;
             }
+            .no-sort { background-image: none !important; }
         </style>
     @endpush
 

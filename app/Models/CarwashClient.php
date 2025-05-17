@@ -15,26 +15,25 @@ class CarwashClient extends Model
         'short_name',
         'full_name',
         'email',
-        'phone',
         'unp',
         'bank_account_number',
         'bank_bic',
         'status',
         'invoice_email_required',
-        'invoice_email_date',
+        'invoice_email_day',
         'postal_address',
         'bank_postal_address',
+        'contract',
     ];
 
-
     protected $casts = [
-        'invoice_email_date' => 'date',
+        'invoice_email_day' => 'integer',
         'invoice_email_required' => 'boolean',
     ];
 
     public function bonusCards()
     {
-        return $this->hasMany(CarwashBonusCard::class, 'client_id');
+        return $this->hasMany(CarwashBonusCard::class);
     }
 
     public function invoices()
