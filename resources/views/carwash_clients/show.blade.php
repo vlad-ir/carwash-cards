@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="container">
-        <h1>Информация о клиенте</h1>
+        <h1>Клиент: {{ $client->short_name }}</h1>
 
         <div class="card">
             <div class="card-header">Детали клиента</div>
@@ -52,9 +52,24 @@
             <form action="{{ route('carwash_clients.destroy', $client->id) }}" method="POST" style="display:inline;">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены?')">Удалить</button>
+                <button type="submit" class="btn btn-danger delete-single" title="Удалить" data-short-name="{{ htmlspecialchars($client->short_name) }}">Удалить</button>
             </form>
             <a href="{{ route('carwash_clients.index') }}" class="btn btn-secondary">Назад</a>
         </div>
     </div>
+
+    @push('scripts')
+        <script>
+            $(document).ready(function() {
+                $('.delete-single').on('click', function(e) {
+                    e.preventDefault();
+                    const form = $(this).closest('form');
+                    const shortName = $(this).data('short-name');
+                    showConfirmModal(`Вы уверены, что хотите удалить клиента ${shortName}?`, function() {
+                        form.submit();
+                    });
+                });
+            });
+        </script>
+    @endpush
 @endsection

@@ -26,7 +26,7 @@ class StoreCarwashClientRequest extends FormRequest
                 Rule::unique('carwash_clients', 'email')->ignore($clientId),
             ],
             'unp' => [
-                'nullable',
+                'required',
                 'string',
                 'max:20',
                 Rule::unique('carwash_clients', 'unp')->ignore($clientId),
@@ -53,6 +53,7 @@ class StoreCarwashClientRequest extends FormRequest
             'email.email' => 'Введите корректный email.',
             'email.max' => 'Email не должен превышать 255 символов.',
             'email.unique' => 'Этот email уже зарегистрирован.',
+            'unp.required' => 'УНП обязателен для заполнения.',
             'unp.max' => 'УНП не должен превышать 20 символов.',
             'unp.unique' => 'Этот УНП уже зарегистрирован.',
             'bank_account_number.max' => 'Номер банковского счета не должен превышать 50 символов.',
