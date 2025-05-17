@@ -30,11 +30,12 @@ class CarwashClientController extends Controller
                 $query->where('status', $request->input('status'));
             }
 
+            if ($request->filled('invoice_email_required')) {
+                $query->where('invoice_email_required', $request->input('invoice_email_required'));
+            }
+
             return DataTables::of($query)
                 ->addColumn('checkbox', fn($client) => '<input type="checkbox" class="select-row" value="' . $client->id . '">')
-                ->editColumn('status', function ($client) {
-                    return $client->status === 'active' ? 'Активен' : 'Заблокирован';
-                })
                 ->addColumn('action', function ($client) {
                     return '
                         <div class="action-buttons">

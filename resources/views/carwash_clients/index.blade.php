@@ -17,6 +17,7 @@
                 <th>Email</th>
                 <th>УНП</th>
                 <th>Статус</th>
+                <th>Счет на email</th>
                 <th>День отправки счета</th>
                 <th>Договор</th>
                 <th>Действия</th>
@@ -53,6 +54,14 @@
                             <option value="blocked">Заблокирован</option>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label for="invoice_email_required" class="form-label">Счет на email</label>
+                        <select name="invoice_email_required" id="invoice_email_required" class="form-control">
+                            <option value="">Все</option>
+                            <option value="1">Да</option>
+                            <option value="0">Нет</option>
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-primary">Применить</button>
                     <button type="button" id="resetFilters" class="btn btn-secondary">Сбросить</button>
                 </form>
@@ -78,6 +87,9 @@
             }
             .dataTables_filter .btn-filter {
                 margin-left: 5px;
+            }
+            .action-buttons {
+                display: flex;
             }
             .action-buttons .btn {
                 margin-right: 5px;
@@ -105,6 +117,7 @@
                             d.email = $('#email').val();
                             d.unp = $('#unp').val();
                             d.status = $('#status').val();
+                            d.invoice_email_required = $('#invoice_email_required').val();
                         }
                     },
                     columns: [
@@ -112,7 +125,26 @@
                         { data: 'short_name' },
                         { data: 'email' },
                         { data: 'unp', defaultContent: '-' },
-                        { data: 'status' },
+                        {
+                            data: 'status',
+                            name: 'status',
+                            render: function(data) {
+                                return data === 'active'
+                                    ? '<i class="fas fa-check text-success"></i>'
+                                    : '<i class="fas fa-times text-danger"></i>';
+                            },
+                            orderData: [4]
+                        },
+                        {
+                            data: 'invoice_email_required',
+                            name: 'invoice_email_required',
+                            render: function(data) {
+                                return data == 1
+                                    ? '<i class="fas fa-check text-success"></i>'
+                                    : '<i class="fas fa-times text-danger"></i>';
+                            },
+                            orderData: [5]
+                        },
                         { data: 'invoice_email_day', defaultContent: '-' },
                         { data: 'contract', defaultContent: '-' },
                         { data: 'action', orderable: false, searchable: false }
@@ -160,7 +192,7 @@
 
                 // Сброс фильтров
                 $('#resetFilters').on('click', function() {
-                    $('#name, #email, #unp, #status').val('');
+                    $('#name, #email, #unp, #status, #invoice_email_required').val('');
                     table.draw();
                     $('#filterOffcanvas').offcanvas('hide');
                 });

@@ -26,6 +26,12 @@ class CarwashClient extends Model
         'contract',
     ];
 
+    protected $attributes = [
+        'invoice_email_day' => 5,
+        'status' => 'active',
+        'invoice_email_required' => true,
+    ];
+
     protected $casts = [
         'invoice_email_day' => 'integer',
         'invoice_email_required' => 'boolean',
