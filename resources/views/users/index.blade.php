@@ -203,13 +203,13 @@
                 }
             },
             columns: [
-                { data: 'checkbox', orderable: false, searchable: false },
-                { data: 'name' },
-                { data: 'email' },
-                { data: 'roles' },
-                { data: 'action', orderable: false, searchable: false }
+                {data: 'checkbox', name: 'checkbox', orderable: false, searchable: false},
+                {data: 'name', name: 'name'},
+                {data: 'email', name: 'email'},
+                {data: 'roles', name: 'roles', orderable: false},
+                {data: 'action', name: 'action', orderable: false, searchable: false}
             ],
-            order: [[1, 'asc']],
+            order: [[1, 'asc']], // Сортировка по умолчанию по имени
             initComplete: function() {
                 var api = this.api();
                 var $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
