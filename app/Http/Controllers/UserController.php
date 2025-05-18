@@ -28,6 +28,18 @@ class UserController extends Controller
                 });
             }
 
+            // Добавляем сортировку по ролям
+            if ($request->has('order') && $request->input('order.0.column') == 3) { // 3 - индекс колонки ролей
+                $direction = $request->input('order.0.dir');
+                $query->orderBy(function($query) {
+                    return $query->selectRaw('GROUP_CONCAT(roles.description ORDER BY roles.description ASC)')
+                        ->from('roles')
+                        ->join('role_user', 'roles.id', '=', 'role_user.role_id')
+                        ->whereColumn('role_user.user_id', 'users.id')
+                        ->groupBy('role_user.user_id');
+                }, $direction);
+            }
+
             return DataTables::of($query)
                 ->addColumn('checkbox', function($user) {
                     return '<input type="checkbox" class="select-row" value="' . $user->id . '">';

@@ -206,7 +206,7 @@
                 {data: 'checkbox', name: 'checkbox', orderable: false, searchable: false},
                 {data: 'name', name: 'name'},
                 {data: 'email', name: 'email'},
-                {data: 'roles', name: 'roles', orderable: false},
+                {data: 'roles', name: 'roles', orderable: true},
                 {data: 'action', name: 'action', orderable: false, searchable: false}
             ],
             order: [[1, 'asc']], // Сортировка по умолчанию по имени
