@@ -15,7 +15,7 @@ class CarwashClientController extends Controller
             $query = CarwashClient::query();
 
             if ($request->filled('name')) {
-                $query->where('full_name', 'like', '%' . $request->input('name') . '%');
+                $query->where('short_name', 'like', '%' . $request->input('name') . '%');
             }
 
             if ($request->filled('email')) {
