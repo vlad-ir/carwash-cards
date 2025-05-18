@@ -25,6 +25,7 @@ Route::middleware(['auth'])->group(function () {
     // Маршруты для администраторов
     Route::middleware(['role:admin'])->group(function () {
         // Управление пользователями
+        Route::post('/users/deleteSelected', [UserController::class, 'deleteSelected'])->name('users.deleteSelected');
         Route::resource('users', UserController::class);
 
         // Клиенты

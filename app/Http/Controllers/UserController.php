@@ -6,14 +6,57 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Yajra\DataTables\Facades\DataTables;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('roles')->get();
+        if ($request->ajax()) {
+            $query = User::with('roles');
+
+            // Применяем фильтры
+            if ($request->has('name') && !empty($request->name)) {
+                $query->where('name', 'like', '%' . $request->name . '%');
+            }
+            if ($request->has('email') && !empty($request->email)) {
+                $query->where('email', 'like', '%' . $request->email . '%');
+            }
+            if ($request->has('role') && !empty($request->role)) {
+                $query->whereHas('roles', function($q) use ($request) {
+                    $q->where('name', $request->role);
+                });
+            }
+
+            return DataTables::of($query)
+                ->addColumn('checkbox', function($user) {
+                    return '<input type="checkbox" class="select-row" value="' . $user->id . '">';
+                })
+                ->addColumn('roles', function($user) {
+                    return $user->roles->pluck('description')->implode(', ');
+                })
+                ->addColumn('action', function($user) {
+                    $buttons = '<div class="action-buttons">';
+                    $buttons .= '<button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal' . $user->id . '"><i class="fas fa-edit"></i></button>';
+                    
+                    if ($user->id !== auth()->id()) {
+                        $buttons .= '<form action="' . route('users.destroy', $user) . '" method="POST" class="d-inline">';
+                        $buttons .= csrf_field();
+                        $buttons .= method_field('DELETE');
+                        $buttons .= '<button type="submit" class="btn btn-sm btn-danger delete-single" data-user-name="' . $user->name . '"><i class="fas fa-trash"></i></button>';
+                        $buttons .= '</form>';
+                    }
+                    
+                    $buttons .= '</div>';
+                    return $buttons;
+                })
+                ->rawColumns(['checkbox', 'action'])
+                ->make(true);
+        }
+
         $roles = Role::all();
-        return view('users.index', compact('users', 'roles'));
+        $users = User::with('roles')->get();
+        return view('users.index', compact('roles', 'users'));
     }
 
     public function store(Request $request)
@@ -71,5 +114,17 @@ class UserController extends Controller
 
         $user->delete();
         return redirect()->route('users.index')->with('success', 'Пользователь успешно удален');
+    }
+
+    public function deleteSelected(Request $request)
+    {
+        $ids = $request->input('ids');
+
+        if (in_array(auth()->id(), $ids)) {
+            return response()->json(['error' => 'Вы не можете удалить свой аккаунт'], 400);
+        }
+
+        User::whereIn('id', $ids)->delete();
+        return response()->json(['success' => true]);
     }
 }
