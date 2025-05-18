@@ -44,5 +44,5 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('carwash_invoices', CarwashInvoiceController::class)->except(['edit', 'update']);
 });
 
-# Auth::routes();
+Auth::routes();
 
