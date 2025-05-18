@@ -13,8 +13,14 @@ return [
     |
     */
 
-    'failed' => 'These credentials do not match our records.',
-    'password' => 'The provided password is incorrect.',
-    'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
+    'email' => 'Поле :attribute должно быть действительным адресом электронной почты.',
+    'required' => 'Поле :attribute обязательно для заполнения.',
+    'failed' => 'Указанные учетные данные не соответствуют нашим записям.',
+    'password' => 'Введенный пароль неверный.',
+    'throttle' => 'Слишком много попыток входа. Пожалуйста, попробуйте снова через :seconds секунд.',
 
+    'attributes' => [
+        'email' => 'электронная почта',
+        'password' => 'пароль',
+    ],
 ];
