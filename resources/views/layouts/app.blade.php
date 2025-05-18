@@ -41,13 +41,13 @@
                 <ul class="navbar-nav ms-auto">
                     @auth
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('customers.index') }}">Заказчики</a>
+                            <a class="nav-link" href="{{ route('carwash_dashboard') }}">Главная</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('fuel-cards.index') }}">Бонусные карты</a>
+                            <a class="nav-link" href="{{ route('carwash_clients.index') }}">Клиенты</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('invoices.index') }}">Счета</a>
+                            <a class="nav-link" href="{{ route('carwash_invoices.index') }}">Счета</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-danger" href="{{ route('logout') }}"
@@ -65,6 +65,7 @@
                     @endauth
                 </ul>
             </div>
+
         </div>
     </nav>
 
