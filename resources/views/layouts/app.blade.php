@@ -43,6 +43,11 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('carwash_dashboard') }}">Главная</a>
                         </li>
+                        @if(auth()->user()->roles()->where('name', 'admin')->exists())
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('users.index') }}">Пользователи</a>
+                            </li>
+                        @endif
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('carwash_clients.index') }}">Клиенты</a>
                         </li>

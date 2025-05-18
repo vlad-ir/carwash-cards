@@ -7,6 +7,7 @@ use App\Http\Controllers\CarwashBonusCardController;
 use App\Http\Controllers\CarwashDashboardController;
 use App\Http\Controllers\CarwashBonusCardStatController;
 use App\Http\Controllers\CarwashInvoiceController;
+use App\Http\Controllers\UserController;
 use App\Http\Middleware\CheckRole;
 
 // Дашборд
@@ -23,6 +24,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Маршруты для администраторов
     Route::middleware(['role:admin'])->group(function () {
+        // Управление пользователями
+        Route::resource('users', UserController::class);
+
         // Клиенты
         Route::post('/carwash_clients/deleteSelected', [CarwashClientController::class, 'deleteSelected'])->name('carwash_clients.deleteSelected');
         Route::get('/carwash_clients/data', [CarwashClientController::class, 'getClientData'])->name('carwash_clients.data');
@@ -54,6 +58,11 @@ Route::middleware(['auth'])->group(function () {
     // Маршруты для клиента автомойки
     Route::middleware(['role:client'])->group(function () {
         // Здесь можно добавить маршруты, доступные только клиенту автомойки
+    });
+
+    // Маршруты для менеджеров
+    Route::middleware(['role:manager'])->group(function () {
+        // Здесь можно добавить маршруты, доступные только менеджерам
     });
 
 });
