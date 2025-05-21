@@ -14,9 +14,6 @@ class CreateCarwashBonusCardStatsTable extends Migration
         Schema::create('carwash_bonus_card_stats', function (Blueprint $table) {
             $table->id();
             $table->foreignId('card_id')->constrained('carwash_bonus_cards')->onDelete('cascade');
-            $table->string('card_name')->nullable();
-            $table->string('card_type');
-            $table->unsignedTinyInteger('post');
             $table->dateTime('start_time');
             $table->unsignedInteger('duration_seconds')->default(0);
             $table->unsignedInteger('remaining_balance_seconds')->nullable();

@@ -54,8 +54,6 @@ class CarwashCsvImportService
             CarwashBonusCardStat::create([
                 'card_id' => $card->id,
                 'card_name' => $data['Название карты'] ?? null,
-                'card_type' => $data['Тип карты'],
-                'post' => (int)$data['Пост'],
                 'start_time' => $data['Время начала'],
                 'duration_seconds' => (int)$data['Длительность'],
                 'remaining_balance_seconds' => $remainingBalance,

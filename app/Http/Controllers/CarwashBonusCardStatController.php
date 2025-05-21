@@ -62,15 +62,6 @@ class CarwashBonusCardStatController extends Controller
     {
         $query = CarwashBonusCardStat::with('card');
 
-        if ($request->has('card_name')) {
-            $query->where('card_name', 'like', '%' . $request->card_name . '%');
-        }
-        if ($request->has('card_type')) {
-            $query->where('card_type', $request->card_type);
-        }
-        if ($request->has('post')) {
-            $query->where('post', $request->post);
-        }
         if ($request->has('start_time')) {
             $query->whereDate('start_time', $request->start_time);
         }

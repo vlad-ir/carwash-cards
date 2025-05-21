@@ -14,24 +14,6 @@
             <div class="filter-panel-body">
                 <form id="filter-form">
                     <div class="form-group">
-                        <label for="card_name_filter">Название карты</label>
-                        <input type="text" class="form-control" id="card_name_filter" name="card_name">
-                    </div>
-                    <div class="form-group">
-                        <label for="card_type_filter">Тип карты</label>
-                        <select class="form-control" id="card_type_filter" name="card_type">
-                            <option value="">Все</option>
-                            <option value="бонусная">Бонусная</option>
-                            <option value="безналичная">Безналичная</option>
-                            <option value="безлимитная">Безлимитная</option>
-                            <option value="золотая">Золотая</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="post_filter">Пост</label>
-                        <input type="number" class="form-control" id="post_filter" name="post" min="1" max="4">
-                    </div>
-                    <div class="form-group">
                         <label for="start_time_filter">Дата начала</label>
                         <input type="date" class="form-control" id="start_time_filter" name="start_time">
                     </div>
@@ -44,10 +26,7 @@
             <thead>
             <tr>
                 <th><input type="checkbox" id="select-all"></th>
-                <th>Название карты</th>
                 <th>Номер карты</th>
-                <th>Тип карты</th>
-                <th>Пост</th>
                 <th>Время начала</th>
                 <th>Длительность (сек)</th>
                 <th>Остаток (сек)</th>
@@ -95,18 +74,12 @@
                     ajax: {
                         url: '{{ route('carwash_bonus_card_stats.data') }}',
                         data: function(d) {
-                            d.card_name = $('#card_name_filter').val();
-                            d.card_type = $('#card_type_filter').val();
-                            d.post = $('#post_filter').val();
                             d.start_time = $('#start_time_filter').val();
                         }
                     },
                     columns: [
                         { data: 'checkbox', name: 'checkbox', orderable: false, searchable: false },
-                        { data: 'card_name', name: 'card_name' },
                         { data: 'card_number', name: 'card_number' },
-                        { data: 'card_type', name: 'card_type' },
-                        { data: 'post', name: 'post' },
                         { data: 'start_time', name: 'start_time' },
                         { data: 'duration_seconds', name: 'duration_seconds' },
                         { data: 'remaining_balance_seconds', name: 'remaining_balance_seconds' },

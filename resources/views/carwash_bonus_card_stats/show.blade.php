@@ -13,8 +13,6 @@
                     <div class="col-md-6">
                         <p><strong>Бонусная карта:</strong> {{ $stat->card->name }} ({{ $stat->card->card_number }})</p>
                         <p><strong>Название карты:</strong> {{ $stat->card_name ?? 'Не указано' }}</p>
-                        <p><strong>Тип карты:</strong> {{ $stat->card_type }}</p>
-                        <p><strong>Пост:</strong> {{ $stat->post }}</p>
                     </div>
                     <div class="col-md-6">
                         <p><strong>Время начала:</strong> {{ $stat->start_time->format('d.m.Y H:i') }}</p>

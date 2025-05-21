@@ -11,9 +11,6 @@ class CarwashBonusCardStat extends Model
 
     protected $fillable = [
         'card_id',
-        'card_name',
-        'card_type',
-        'post',
         'start_time',
         'duration_seconds',
         'remaining_balance_seconds',
