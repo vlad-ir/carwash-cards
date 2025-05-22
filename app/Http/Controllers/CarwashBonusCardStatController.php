@@ -62,25 +62,36 @@ class CarwashBonusCardStatController extends Controller
     {
         $query = CarwashBonusCardStat::with('card');
 
-        if ($request->has('start_time')) {
+        // Фильтр по дате начала (точная дата или диапазон)
+        if ($request->has('start_time') && $request->start_time) {
             $query->whereDate('start_time', $request->start_time);
         }
 
-        return DataTables::of($query)
+        return DataTables::eloquent($query)
             ->addColumn('checkbox', fn($stat) => '<input type="checkbox" class="select-row" value="' . $stat->id . '">')
-            ->addColumn('card_number', fn($stat) => $stat->card->card_number ?? 'N/A')
+            ->addColumn('card_number', fn($stat) => $stat->card?->card_number ?? 'N/A')
+            ->editColumn('start_time', fn($stat) => $stat->start_time->format('d.m.Y H:i:s'))
+            ->editColumn('duration_seconds', fn($stat) => gmdate("H:i:s", $stat->duration_seconds))
+            ->editColumn('remaining_balance_seconds', fn($stat) => gmdate("H:i:s", $stat->remaining_balance_seconds))
+            ->editColumn('import_date', fn($stat) => optional($stat->import_date)->format('d.m.Y'))
             ->addColumn('action', function ($stat) {
                 return '
-                    <a href="' . route('carwash_bonus_card_stats.show', $stat->id) . '" class="btn btn-primary btn-sm">Просмотр</a>
-                    <a href="' . route('carwash_bonus_card_stats.edit', $stat->id) . '" class="btn btn-warning btn-sm">Редактировать</a>
+                <div class="action-buttons">
+                    <a href="' . route('carwash_bonus_card_stats.show', $stat->id) . '" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
+                    <a href="' . route('carwash_bonus_card_stats.edit', $stat->id) . '" class="btn btn-sm btn-outline-warning" title="Редактировать"><i class="fas fa-edit"></i></a>
                     <form action="' . route('carwash_bonus_card_stats.destroy', $stat->id) . '" method="POST" style="display:inline;">
                         ' . csrf_field() . '
                         ' . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm(\'Вы уверены?\')">Удалить</button>
-                    </form>';
+                        <button type="submit" class="btn btn-sm btn-outline-danger delete-single"
+                                title="Удалить" data-card-name="' . htmlspecialchars($stat->card?->name ?? 'Неизвестная карта') . '"
+                                data-card-number="' . htmlspecialchars($stat->card?->card_number ?? '—') . '">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>';
             })
             ->rawColumns(['checkbox', 'action'])
-            ->make(true);
+            ->toJson();
     }
 
     public function deleteSelected(Request $request)
