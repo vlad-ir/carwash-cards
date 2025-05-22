@@ -22,12 +22,12 @@
 
         <form action="{{ route('carwash_bonus_card_stats.upload') }}" method="POST" enctype="multipart/form-data">
             @csrf
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label for="csv_file">Выберите CSV-файл</label>
                 <input type="file" name="csv_file" id="csv_file" class="form-control-file" accept=".csv" required>
             </div>
             <button type="submit" class="btn btn-primary">Загрузить</button>
-            <a href="{{ route('carwash_bonus_card_stats.index') }}" class="btn btn-secondary">Назад</a>
+            <a href="{{ route('carwash_bonus_card_stats.index') }}" class="btn btn-secondary">Отмена</a>
         </form>
     </div>
 @endsection

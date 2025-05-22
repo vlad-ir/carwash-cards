@@ -77,7 +77,6 @@ class CarwashBonusCardStatController extends Controller
             ->addColumn('action', function ($stat) {
                 return '
                 <div class="action-buttons">
-                    <a href="' . route('carwash_bonus_card_stats.show', $stat->id) . '" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
                     <a href="' . route('carwash_bonus_card_stats.edit', $stat->id) . '" class="btn btn-sm btn-outline-warning" title="Редактировать"><i class="fas fa-edit"></i></a>
                     <form action="' . route('carwash_bonus_card_stats.destroy', $stat->id) . '" method="POST" style="display:inline;">
                         ' . csrf_field() . '

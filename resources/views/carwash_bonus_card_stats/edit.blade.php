@@ -51,7 +51,7 @@
                     </div>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary">Обновить</button>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
             <a href="{{ route('carwash_bonus_card_stats.index') }}" class="btn btn-secondary">Отмена</a>
         </form>
     </div>
