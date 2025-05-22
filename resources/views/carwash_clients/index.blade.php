@@ -156,11 +156,59 @@
                     order: [[1, 'asc']],
                     initComplete: function () {
                         var api = this.api();
+
+                        // Кнопка "Фильтр"
                         var $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
                             .on('click', function () {
                                 $('#filterOffcanvas').offcanvas('show');
                             });
-                        $(api.table().container()).find('div.dataTables_filter').append($filterBtn);
+
+                        // Кнопка "Сбросить фильтры"
+                        var $resetFilterBtn = $('<button id="filter-reset-btn" class="btn btn-danger btn-sm ms-1" title="Сбросить фильтры"><i class="fas fa-times"></i></button>')
+                            .on('click', function () {
+                                $('#name, #email, #unp, #status, #invoice_email_required').val('');
+                                table.draw();
+                            });
+
+                        // Добавляем кнопки
+                        var $filterContainer = $(api.table().container()).find('div.dataTables_filter');
+                        $filterContainer.append($filterBtn).append($resetFilterBtn);
+
+                        // Функция проверяет, есть ли установленные фильтры
+                        function hasActiveFilters() {
+                            return $('#name, #email, #unp, #status, #invoice_email_required').filter(function () {
+                                return $(this).val(); // Возвращает true, если значение не пустое
+                            }).length > 0;
+                        }
+
+                        // Функция обновляет видимость кнопки сброса
+                        function toggleResetButtonVisibility() {
+                            if (hasActiveFilters()) {
+                                $resetFilterBtn.show();
+                                $filterBtn.removeClass('btn-secondary').addClass('btn-primary');
+                            } else {
+                                $resetFilterBtn.hide();
+                                $filterBtn.removeClass('btn-primary').addClass('btn-secondary');
+                            }
+                        }
+
+                        // Вызываем при загрузке
+                        toggleResetButtonVisibility();
+
+                        // Вызываем после применения фильтров
+                        $('#filterForm').on('submit', function () {
+                            setTimeout(toggleResetButtonVisibility, 100);
+                        });
+
+                        // Вызываем при изменении любого поля фильтрации
+                        $('#name, #email, #unp, #status, #invoice_email_required').on('change input', function () {
+                            toggleResetButtonVisibility();
+                        });
+
+                        // Также вызываем после перерисовки таблицы
+                        table.on('draw', function () {
+                            toggleResetButtonVisibility();
+                        });
                     },
                     drawCallback: function () {
                         $('.select-row').each(function () {

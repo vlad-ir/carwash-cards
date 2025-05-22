@@ -130,12 +130,59 @@
                     ],
                     order: [[1, 'asc']],
                     initComplete: function () {
-                        const api = this.api();
-                        const $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
+                        var api = this.api();
+
+                        // Кнопка "Фильтр"
+                        var $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
                             .on('click', function () {
                                 $('#filterOffcanvas').offcanvas('show');
                             });
-                        $(api.table().container()).find('div.dataTables_filter').append($filterBtn);
+
+                        // Кнопка "Сбросить фильтры" (по умолчанию скрыта)
+                        var $resetFilterBtn = $('<button id="filter-reset-btn" class="btn btn-danger btn-sm ms-1" title="Сбросить фильтры"><i class="fas fa-times"></i></button>')
+                            .on('click', function () {
+                                $('#name_filter, #card_number_filter, #client_short_name_filter, #status_filter').val('');
+                                table.draw();
+                            });
+
+                        // Добавляем кнопки к фильтру DataTables
+                        var $filterContainer = $(api.table().container()).find('div.dataTables_filter');
+                        $filterContainer.append($filterBtn).append($resetFilterBtn);
+
+                        // Проверяем, есть ли заполненные фильтры
+                        function hasActiveFilters() {
+                            return $('#name_filter, #card_number_filter, #client_short_name_filter, #status_filter')
+                                .filter(function () { return $(this).val(); }).length > 0;
+                        }
+
+                        // Обновляем видимость кнопки "Сбросить фильтры"
+                        function toggleResetButtonVisibility() {
+                            if (hasActiveFilters()) {
+                                $resetFilterBtn.show();
+                                $filterBtn.removeClass('btn-secondary').addClass('btn-primary');
+                            } else {
+                                $resetFilterBtn.hide();
+                                $filterBtn.removeClass('btn-primary').addClass('btn-secondary');
+                            }
+                        }
+
+                        // Вызываем проверку при загрузке
+                        toggleResetButtonVisibility();
+
+                        // При применении фильтров через форму — обновляем статус кнопки
+                        $('#filterForm').on('submit', function () {
+                            setTimeout(toggleResetButtonVisibility, 100);
+                        });
+
+                        // При изменении любого поля фильтрации — обновляем статус кнопки
+                        $('#name_filter, #card_number_filter, #client_short_name_filter, #status_filter').on('change input', function () {
+                            toggleResetButtonVisibility();
+                        });
+
+                        // Также проверяем после перерисовки таблицы
+                        table.on('draw', function () {
+                            toggleResetButtonVisibility();
+                        });
                     },
                     drawCallback: function () {
                         $('.select-row').each(function () {
