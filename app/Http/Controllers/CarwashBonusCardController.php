@@ -23,20 +23,7 @@ class CarwashBonusCardController extends Controller
 
     public function store(StoreCarwashBonusCardRequest $request)
     {
-        $validated = $request->validated();
-
-        CarwashBonusCard::create([
-            'name' => $validated['name'],
-            'card_number' => $validated['card_number'],
-            'discount_percentage' => $validated['discount_percentage'],
-            'balance' => $validated['balance'],
-            'status' => $validated['status'],
-            'car_license_plate' => $validated['car_license_plate'] ?? null,
-            'rate_per_minute' => $validated['rate_per_minute'],
-            'invoice_required' => $validated['invoice_required'],
-            'client_id' => $validated['client_id'],
-        ]);
-
+        CarwashBonusCard::create($request->validated());
         return redirect()->route('carwash_bonus_cards.index')->with('success', 'Бонусная карта успешно добавлена.');
     }
 
@@ -53,20 +40,8 @@ class CarwashBonusCardController extends Controller
         return view('carwash_bonus_cards.edit', compact('bonusCard', 'clients'));
     }
 
-    public function update(Request $request, $id)
+    public function update(StoreCarwashBonusCardRequest $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:100',
-            'card_number' => 'required|string|max:20|unique:carwash_bonus_cards,card_number,' . $id,
-            'discount_percentage' => 'required|numeric|min:0|max:100',
-            'balance' => 'required|date_format:H:i:s',
-            'status' => 'required|in:active,inactive,blocked',
-            'car_license_plate' => 'nullable|string|max:20',
-            'rate_per_minute' => 'required|numeric|min:0',
-            'invoice_required' => 'boolean',
-            'client_id' => 'required|exists:carwash_clients,id',
-        ]);
-
         $bonusCard = CarwashBonusCard::findOrFail($id);
         $bonusCard->update($request->all());
 
@@ -105,13 +80,15 @@ class CarwashBonusCardController extends Controller
             ->addColumn('client_short_name', fn($card) => $card->client->short_name)
             ->addColumn('action', function ($card) {
                 return '
-                    <a href="' . route('carwash_bonus_cards.show', $card->id) . '" class="btn btn-primary btn-sm">Просмотр</a>
-                    <a href="' . route('carwash_bonus_cards.edit', $card->id) . '" class="btn btn-warning btn-sm">Редактировать</a>
-                    <form action="' . route('carwash_bonus_cards.destroy', $card->id) . '" method="POST" style="display:inline;">
-                        ' . csrf_field() . '
-                        ' . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm(\'Вы уверены?\')">Удалить</button>
-                    </form>';
+                        <div class="action-buttons">
+                            <a href="' . route('carwash_bonus_cards.show', $card->id) . '" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
+                            <a href="' . route('carwash_bonus_cards.edit', $card->id) . '" class="btn btn-sm btn-outline-warning" title="Редактировать"><i class="fas fa-edit"></i></a>
+                            <form action="' . route('carwash_bonus_cards.destroy', $card->id) . '" method="POST" style="display:inline;">
+                                ' . csrf_field() . '
+                                ' . method_field('DELETE') . '
+                                <button type="submit" class="btn btn-sm btn-outline-danger delete-single" title="Удалить" data-short-name="' . htmlspecialchars($card->name) . '"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>';
             })
             ->rawColumns(['checkbox', 'action'])
             ->make(true);

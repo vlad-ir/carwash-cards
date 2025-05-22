@@ -111,7 +111,7 @@
                     processing: true,
                     serverSide: true,
                     ajax: {
-                        url: "{{ url('carwash_clients') }}",
+                        url: '{{ route('carwash_clients.data') }}',
                         data: function(d) {
                             d.name = $('#name').val();
                             d.email = $('#email').val();

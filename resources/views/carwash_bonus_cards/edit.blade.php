@@ -14,44 +14,44 @@
             </div>
         @endif
 
-        <form action="{{ route('carwash_bonus_cards.update', $carwashBonusCard->id) }}" method="POST">
+        <form action="{{ route('carwash_bonus_cards.update', $bonusCard->id) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="form-group">
                 <label for="name">Название</label>
-                <input type="text" name="name" id="name" value="{{ old('name', $carwashBonusCard->name) }}" class="form-control" required>
+                <input type="text" name="name" id="name" value="{{ old('name', $bonusCard->name) }}" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="card_number">Номер карты</label>
-                <input type="text" name="card_number" id="card_number" value="{{ old('card_number', $carwashBonusCard->card_number) }}" class="form-control" required>
+                <input type="text" name="card_number" id="card_number" value="{{ old('card_number', $bonusCard->card_number) }}" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="discount_percentage">Скидка (%)</label>
-                <input type="number" step="0.01" name="discount_percentage" id="discount_percentage" value="{{ old('discount_percentage', $carwashBonusCard->discount_percentage) }}" class="form-control" required>
+                <input type="number" step="0.01" name="discount_percentage" id="discount_percentage" value="{{ old('discount_percentage', $bonusCard->discount_percentage) }}" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="balance">Баланс (HH:MM:SS)</label>
-                <input type="text" name="balance" id="balance" value="{{ old('balance', $carwashBonusCard->balance) }}" class="form-control" required>
+                <input type="text" name="balance" id="balance" value="{{ old('balance', $bonusCard->balance) }}" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="status">Статус</label>
                 <select name="status" id="status" class="form-control" required>
-                    <option value="active" {{ old('status', $carwashBonusCard->status) == 'active' ? 'selected' : '' }}>Активна</option>
-                    <option value="inactive" {{ old('status', $carwashBonusCard->status) == 'inactive' ? 'selected' : '' }}>Неактивна</option>
-                    <option value="blocked" {{ old('status', $carwashBonusCard->status) == 'blocked' ? 'selected' : '' }}>Заблокирована</option>
+                    <option value="active" {{ old('status', $bonusCard->status) == 'active' ? 'selected' : '' }}>Активна</option>
+                    <option value="inactive" {{ old('status', $bonusCard->status) == 'inactive' ? 'selected' : '' }}>Неактивна</option>
+                    <option value="blocked" {{ old('status', $bonusCard->status) == 'blocked' ? 'selected' : '' }}>Заблокирована</option>
                 </select>
             </div>
             <div class="form-group">
                 <label for="car_license_plate">Номер автомобиля</label>
-                <input type="text" name="car_license_plate" id="car_license_plate" value="{{ old('car_license_plate', $carwashBonusCard->car_license_plate) }}" class="form-control">
+                <input type="text" name="car_license_plate" id="car_license_plate" value="{{ old('car_license_plate', $bonusCard->car_license_plate) }}" class="form-control">
             </div>
             <div class="form-group">
                 <label for="rate_per_minute">Ставка за минуту</label>
-                <input type="number" step="0.01" name="rate_per_minute" id="rate_per_minute" value="{{ old('rate_per_minute', $carwashBonusCard->rate_per_minute) }}" class="form-control" required>
+                <input type="number" step="0.01" name="rate_per_minute" id="rate_per_minute" value="{{ old('rate_per_minute', $bonusCard->rate_per_minute) }}" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="invoice_required">
-                    <input type="checkbox" name="invoice_required" id="invoice_required" value="1" {{ old('invoice_required', $carwashBonusCard->invoice_required) ? 'checked' : '' }}>
+                    <input type="checkbox" name="invoice_required" id="invoice_required" value="1" {{ old('invoice_required', $bonusCard->invoice_required) ? 'checked' : '' }}>
                     Требуется счет
                 </label>
             </div>
@@ -59,7 +59,7 @@
                 <label for="client_id">Клиент</label>
                 <select name="client_id" id="client_id" class="form-control" required>
                     @foreach ($clients as $client)
-                        <option value="{{ $client->id }}" {{ old('client_id', $carwashBonusCard->client_id) == $client->id ? 'selected' : '' }}>{{ $client->short_name }}</option>
+                        <option value="{{ $client->id }}" {{ old('client_id', $bonusCard->client_id) == $client->id ? 'selected' : '' }}>{{ $client->short_name }}</option>
                     @endforeach
                 </select>
             </div>
