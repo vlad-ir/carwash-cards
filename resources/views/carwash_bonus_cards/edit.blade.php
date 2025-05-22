@@ -63,7 +63,7 @@
                     @endforeach
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary">Обновить</button>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
             <a href="{{ route('carwash_bonus_cards.index') }}" class="btn btn-secondary">Отмена</a>
         </form>
     </div>

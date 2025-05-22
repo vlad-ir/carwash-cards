@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCarwashBonusCardRequest extends FormRequest
 {
@@ -13,9 +14,16 @@ class StoreCarwashBonusCardRequest extends FormRequest
 
     public function rules(): array
     {
+        $bonusCardId = $this->route('carwash_bonus_card');
+
         return [
             'name' => 'required|string|max:100',
-            'card_number' => 'required|string|max:20|unique:carwash_bonus_cards',
+            'card_number' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('carwash_bonus_cards', 'card_number')->ignore($bonusCardId),
+            ],
             'discount_percentage' => 'required|numeric|min:0|max:100',
             'balance' => 'required|date_format:H:i:s',
             'status' => 'required|in:active,inactive,blocked',

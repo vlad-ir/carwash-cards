@@ -45,16 +45,15 @@
                     <dd class="col-sm-9">{{ $client->contract ?? '-' }}</dd>
                 </dl>
             </div>
-        </div>
-
-        <div class="mt-3">
-            <a href="{{ route('carwash_clients.edit', $client->id) }}" class="btn btn-warning">Редактировать</a>
-            <form action="{{ route('carwash_clients.destroy', $client->id) }}" method="POST" style="display:inline;">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-danger delete-single" title="Удалить" data-short-name="{{ htmlspecialchars($client->short_name) }}">Удалить</button>
-            </form>
-            <a href="{{ route('carwash_clients.index') }}" class="btn btn-secondary">Назад</a>
+            <div class="card-footer">
+                <a href="{{ route('carwash_clients.edit', $client->id) }}" class="btn btn-warning">Редактировать</a>
+                <form action="{{ route('carwash_clients.destroy', $client->id) }}" method="POST" style="display:inline;">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger delete-single" title="Удалить" data-short-name="{{ htmlspecialchars($client->short_name) }}">Удалить</button>
+                </form>
+                <a href="{{ route('carwash_clients.index') }}" class="btn btn-secondary">Назад</a>
+            </div>
         </div>
     </div>
 

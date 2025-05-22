@@ -57,10 +57,9 @@ class CarwashClientController extends Controller
             ->with('success', 'Клиент успешно удален.');
     }
 
-
     public function getClientData(Request $request)
     {
-        $query = CarwashClient::query();
+        $query = CarwashClient::withCount('bonusCards');
 
         if ($request->filled('name')) {
             $query->where('short_name', 'like', '%' . $request->input('name') . '%');
@@ -82,19 +81,29 @@ class CarwashClientController extends Controller
             $query->where('invoice_email_required', $request->input('invoice_email_required'));
         }
 
-        return DataTables::of($query)
+        $dataTable = DataTables::of($query);
+
+        $dataTable->orderColumn('bonus_cards_count', function ($query, $order) {
+            $query->orderBy('bonus_cards_count', $order);
+        });
+
+        return $dataTable
             ->addColumn('checkbox', fn($client) => '<input type="checkbox" class="select-row" value="' . $client->id . '">')
+            ->addColumn('bonus_cards_count', fn($client) => $client->bonus_cards_count)
             ->addColumn('action', function ($client) {
                 return '
-                        <div class="action-buttons">
-                            <a href="' . route('carwash_clients.show', $client->id) . '" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
-                            <a href="' . route('carwash_clients.edit', $client->id) . '" class="btn btn-sm btn-outline-warning" title="Редактировать"><i class="fas fa-edit"></i></a>
-                            <form action="' . route('carwash_clients.destroy', $client->id) . '" method="POST" style="display:inline;">
-                                ' . csrf_field() . '
-                                ' . method_field('DELETE') . '
-                                <button type="submit" class="btn btn-sm btn-outline-danger delete-single" title="Удалить" data-short-name="' . htmlspecialchars($client->short_name) . '"><i class="fas fa-trash"></i></button>
-                            </form>
-                        </div>';
+                    <div class="action-buttons">
+                        <a href="' . route('carwash_clients.show', $client->id) . '" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
+                        <a href="' . route('carwash_clients.edit', $client->id) . '" class="btn btn-sm btn-outline-warning" title="Редактировать"><i class="fas fa-edit"></i></a>
+                        <form action="' . route('carwash_clients.destroy', $client->id) . '" method="POST" style="display:inline;">
+                            ' . csrf_field() . '
+                            ' . method_field('DELETE') . '
+                            <button type="submit" class="btn btn-sm btn-outline-danger delete-single"
+                                    title="Удалить" data-short-name="' . htmlspecialchars($client->short_name) . '">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>';
             })
             ->rawColumns(['checkbox', 'action'])
             ->make(true);

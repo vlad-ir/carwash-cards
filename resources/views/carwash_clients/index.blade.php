@@ -3,12 +3,10 @@
 @section('content')
     <div class="container">
         <h1>Клиенты</h1>
-
         <div class="mb-3">
             <a href="{{ route('carwash_clients.create') }}" class="btn btn-primary">Добавить клиента</a>
             <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>
-
         <table id="clientsTable" class="table table-bordered">
             <thead>
             <tr>
@@ -19,6 +17,7 @@
                 <th>Статус</th>
                 <th>Счет на email</th>
                 <th>День отправки счета</th>
+                <th>Количество карт</th>
                 <th>Договор</th>
                 <th>Действия</th>
             </tr>
@@ -102,17 +101,15 @@
 
     @push('scripts')
         <script>
-            $(document).ready(function() {
-                // Хранилище выбранных ID
+            $(document).ready(function () {
                 let selectedIds = [];
 
-                // Инициализация DataTables
                 var table = $('#clientsTable').DataTable({
                     processing: true,
                     serverSide: true,
                     ajax: {
                         url: '{{ route('carwash_clients.data') }}',
-                        data: function(d) {
+                        data: function (d) {
                             d.name = $('#name').val();
                             d.email = $('#email').val();
                             d.unp = $('#unp').val();
@@ -128,7 +125,7 @@
                         {
                             data: 'status',
                             name: 'status',
-                            render: function(data) {
+                            render: function (data) {
                                 return data === 'active'
                                     ? '<i class="fas fa-check text-success"></i>'
                                     : '<i class="fas fa-times text-danger"></i>';
@@ -138,7 +135,7 @@
                         {
                             data: 'invoice_email_required',
                             name: 'invoice_email_required',
-                            render: function(data) {
+                            render: function (data) {
                                 return data == 1
                                     ? '<i class="fas fa-check text-success"></i>'
                                     : '<i class="fas fa-times text-danger"></i>';
@@ -146,36 +143,42 @@
                             orderData: [5]
                         },
                         { data: 'invoice_email_day', defaultContent: '-' },
+                        {
+                            data: 'bonus_cards_count',
+                            name: 'bonus_cards_count',
+                            orderable: true,
+                            searchable: false,
+                            defaultContent: '0'
+                        },
                         { data: 'contract', defaultContent: '-' },
                         { data: 'action', orderable: false, searchable: false }
                     ],
                     order: [[1, 'asc']],
-                    initComplete: function() {
+                    initComplete: function () {
                         var api = this.api();
                         var $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
-                            .on('click', function() {
+                            .on('click', function () {
                                 $('#filterOffcanvas').offcanvas('show');
                             });
                         $(api.table().container()).find('div.dataTables_filter').append($filterBtn);
                     },
-                    drawCallback: function() {
-                        $('.select-row').each(function() {
+                    drawCallback: function () {
+                        $('.select-row').each(function () {
                             $(this).prop('checked', selectedIds.includes($(this).val()));
                         });
                         updateSelectedCount();
 
-                        $('.delete-single').off('click').on('click', function(e) {
+                        $('.delete-single').off('click').on('click', function (e) {
                             e.preventDefault();
                             const form = $(this).closest('form');
                             const shortName = $(this).data('short-name');
-                            showConfirmModal(`Вы уверены, что хотите удалить клиента ${shortName}?`, function() {
+                            showConfirmModal(`Вы уверены, что хотите удалить клиента ${shortName}?`, function () {
                                 form.submit();
                             });
                         });
                     }
                 });
 
-                // Обновление количества выбранных записей
                 function updateSelectedCount() {
                     let count = selectedIds.length;
                     let info = table.page.info();
@@ -183,24 +186,21 @@
                     $('.dataTables_info').text(`${statusText} | Всего записей: ${info.recordsTotal}`);
                 }
 
-                // Обработка формы фильтрации
-                $('#filterForm').on('submit', function(e) {
+                $('#filterForm').on('submit', function (e) {
                     e.preventDefault();
                     table.draw();
                     $('#filterOffcanvas').offcanvas('hide');
                 });
 
-                // Сброс фильтров
-                $('#resetFilters').on('click', function() {
+                $('#resetFilters').on('click', function () {
                     $('#name, #email, #unp, #status, #invoice_email_required').val('');
                     table.draw();
                     $('#filterOffcanvas').offcanvas('hide');
                 });
 
-                // Выбор всех чекбоксов
-                $('#selectAll').on('change', function() {
+                $('#selectAll').on('change', function () {
                     let checked = this.checked;
-                    $('.select-row').each(function() {
+                    $('.select-row').each(function () {
                         let id = $(this).val();
                         if (checked && !selectedIds.includes(id)) {
                             selectedIds.push(id);
@@ -213,13 +213,10 @@
                     updateSelectedCount();
                 });
 
-                // Выбор отдельных чекбоксов
-                $(document).on('change', '.select-row', function() {
+                $(document).on('change', '.select-row', function () {
                     let id = $(this).val();
                     if ($(this).is(':checked')) {
-                        if (!selectedIds.includes(id)) {
-                            selectedIds.push(id);
-                        }
+                        if (!selectedIds.includes(id)) selectedIds.push(id);
                     } else {
                         selectedIds = selectedIds.filter(item => item !== id);
                     }
@@ -228,12 +225,10 @@
                     updateSelectedCount();
                 });
 
-                // Удаление выбранных клиентов
-                $('#deleteSelected').on('click', function() {
-                    if (selectedIds.length === 0) {
-                        return;
-                    }
-                    showConfirmModal(`Вы уверены, что хотите удалить ${selectedIds.length} клиента(ов)?`, function() {
+                $('#deleteSelected').on('click', function () {
+                    if (selectedIds.length === 0) return;
+
+                    showConfirmModal(`Вы уверены, что хотите удалить ${selectedIds.length} клиент(ов)?`, function () {
                         $.ajax({
                             url: "{{ route('carwash_clients.deleteSelected') }}",
                             method: 'POST',
@@ -241,13 +236,13 @@
                                 _token: "{{ csrf_token() }}",
                                 ids: selectedIds
                             },
-                            success: function(response) {
+                            success: function (response) {
                                 showToast('Успех', response.success, 'success');
                                 selectedIds = [];
                                 $('#deleteSelected').prop('disabled', true);
                                 table.draw();
                             },
-                            error: function() {
+                            error: function () {
                                 showToast('Ошибка', 'Ошибка при удалении клиентов.', 'error');
                             }
                         });

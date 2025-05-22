@@ -32,7 +32,31 @@
                 <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
             <div class="offcanvas-body">
-
+                <form id="filterForm">
+                    <div class="mb-3">
+                        <label for="name_filter" class="form-label">Название</label>
+                        <input type="text" name="name" id="name_filter" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="card_number_filter" class="form-label">Номер карты</label>
+                        <input type="text" name="card_number" id="card_number_filter" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="client_short_name_filter" class="form-label">Краткое имя клиента</label>
+                        <input type="text" name="client_short_name" id="client_short_name_filter" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="status_filter" class="form-label">Статус</label>
+                        <select name="status" id="status_filter" class="form-control">
+                            <option value="">Все</option>
+                            <option value="active">Активна</option>
+                            <option value="inactive">Неактивна</option>
+                            <option value="blocked">Заблокирована</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Применить</button>
+                    <button type="button" id="resetFilters" class="btn btn-secondary">Сбросить</button>
+                </form>
             </div>
         </div>
     </div>
@@ -70,68 +94,75 @@
 
     @push('scripts')
         <script>
-            $(document).ready(function() {
-                // Хранилище выбранных ID
+            $(document).ready(function () {
                 let selectedIds = [];
 
-                // Инициализация DataTables
-                var table = $('#bonusCardsTable').DataTable({
+                const table = $('#bonusCardsTable').DataTable({
                     processing: true,
                     serverSide: true,
                     ajax: {
                         url: '{{ route('carwash_bonus_cards.data') }}',
-                        data: function(d) {
+                        data: function (d) {
                             d.name = $('#name_filter').val();
                             d.card_number = $('#card_number_filter').val();
-                            d.car_license_plate = $('#car_license_plate_filter').val();
                             d.client_short_name = $('#client_short_name_filter').val();
+                            d.status = $('#status_filter').val();
                         }
                     },
                     columns: [
-                        { data: 'checkbox', name: 'checkbox', orderable: false, searchable: false },
-                        { data: 'name', name: 'name' },
-                        { data: 'card_number', name: 'card_number' },
-                        { data: 'discount_percentage', name: 'discount_percentage' },
-                        { data: 'balance', name: 'balance' },
-                        { data: 'status', name: 'status' },
-                        { data: 'client_short_name', name: 'client_short_name' },
-                        { data: 'action', name: 'action', orderable: false, searchable: false }
+                        { data: 'checkbox', orderable: false, searchable: false },
+                        { data: 'name' },
+                        { data: 'card_number' },
+                        { data: 'discount_percentage' },
+                        { data: 'balance' },
+                        {
+                            data: 'status',
+                            render: function (data) {
+                                return data === 'active'
+                                    ? '<i class="fas fa-check text-success"></i>'
+                                    : data === 'blocked'
+                                        ? '<i class="fas fa-ban text-danger"></i>'
+                                        : '<i class="fas fa-pause text-muted"></i>';
+                            }
+                        },
+                        { data: 'client_short_name' },
+                        { data: 'action', orderable: false, searchable: false }
                     ],
                     order: [[1, 'asc']],
-                    initComplete: function() {
-                        var api = this.api();
-                        var $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
-                            .on('click', function() {
+                    initComplete: function () {
+                        const api = this.api();
+                        const $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
+                            .on('click', function () {
                                 $('#filterOffcanvas').offcanvas('show');
                             });
                         $(api.table().container()).find('div.dataTables_filter').append($filterBtn);
                     },
-                    drawCallback: function() {
-                        $('.select-row').each(function() {
+                    drawCallback: function () {
+                        $('.select-row').each(function () {
                             $(this).prop('checked', selectedIds.includes($(this).val()));
                         });
                         updateSelectedCount();
 
-                        $('.delete-single').off('click').on('click', function(e) {
+                        $('.delete-single').off('click').on('click', function (e) {
                             e.preventDefault();
                             const form = $(this).closest('form');
-                            const cardName = $(this).data('name');
-                            showConfirmModal(`Вы уверены, что хотите удалить бонусную карту ${cardName}?`, function() {
+                            const cardName = $(this).data('card-name');
+                            const cardNumber = $(this).data('card-number');
+                            showConfirmModal(`Вы уверены, что хотите удалить бонусную карту ${cardName} (${cardNumber})?`, function () {
                                 form.submit();
                             });
                         });
                     }
                 });
 
-                // Обновление количества выбранных записей
                 function updateSelectedCount() {
-                    let count = selectedIds.length;
-                    let info = table.page.info();
-                    let statusText = `Выбрано записей: ${count}`;
+                    const count = selectedIds.length;
+                    const info = table.page.info();
+                    const statusText = `Выбрано записей: ${count}`;
                     $('.dataTables_info').text(`${statusText} | Всего записей: ${info.recordsTotal}`);
                 }
 
-                // Обработка формы фильтрации
+                // Применение фильтров
                 $('#filterForm').on('submit', function(e) {
                     e.preventDefault();
                     table.draw();
@@ -140,16 +171,15 @@
 
                 // Сброс фильтров
                 $('#resetFilters').on('click', function() {
-                    $('#name, #email, #unp, #status, #invoice_email_required').val('');
+                    $('#name_filter, #card_number_filter, #client_short_name_filter, #status_filter').val('');
                     table.draw();
                     $('#filterOffcanvas').offcanvas('hide');
                 });
 
-                // Выбор всех чекбоксов
-                $('#selectAll').on('change', function() {
-                    let checked = this.checked;
-                    $('.select-row').each(function() {
-                        let id = $(this).val();
+                $('#selectAll').on('change', function () {
+                    const checked = this.checked;
+                    $('.select-row').each(function () {
+                        const id = $(this).val();
                         if (checked && !selectedIds.includes(id)) {
                             selectedIds.push(id);
                         } else if (!checked && selectedIds.includes(id)) {
@@ -161,13 +191,10 @@
                     updateSelectedCount();
                 });
 
-                // Выбор отдельных чекбоксов
-                $(document).on('change', '.select-row', function() {
-                    let id = $(this).val();
+                $(document).on('change', '.select-row', function () {
+                    const id = $(this).val();
                     if ($(this).is(':checked')) {
-                        if (!selectedIds.includes(id)) {
-                            selectedIds.push(id);
-                        }
+                        if (!selectedIds.includes(id)) selectedIds.push(id);
                     } else {
                         selectedIds = selectedIds.filter(item => item !== id);
                     }
@@ -176,12 +203,10 @@
                     updateSelectedCount();
                 });
 
-                // Удаление выбранных клиентов
-                $('#deleteSelected').on('click', function() {
-                    if (selectedIds.length === 0) {
-                        return;
-                    }
-                    showConfirmModal(`Вы уверены, что хотите удалить ${selectedIds.length} клиента(ов)?`, function() {
+                $('#deleteSelected').on('click', function () {
+                    if (selectedIds.length === 0) return;
+
+                    showConfirmModal(`Вы уверены, что хотите удалить ${selectedIds.length} бонусных карт(ы)?`, function () {
                         $.ajax({
                             url: "{{ route('carwash_bonus_cards.deleteSelected') }}",
                             method: 'POST',
@@ -189,13 +214,13 @@
                                 _token: "{{ csrf_token() }}",
                                 ids: selectedIds
                             },
-                            success: function(response) {
+                            success: function (response) {
                                 showToast('Успех', response.success, 'success');
                                 selectedIds = [];
                                 $('#deleteSelected').prop('disabled', true);
                                 table.draw();
                             },
-                            error: function() {
+                            error: function () {
                                 showToast('Ошибка', 'Ошибка при удалении бонусных карт.', 'error');
                             }
                         });

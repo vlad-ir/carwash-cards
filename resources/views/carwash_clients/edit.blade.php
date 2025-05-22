@@ -144,7 +144,7 @@
             </div>
 
             <button type="submit" class="btn btn-primary">Сохранить</button>
-            <a href="{{ route('carwash_clients.index') }}" class="btn btn-secondary">Назад</a>
+            <a href="{{ route('carwash_clients.index') }}" class="btn btn-secondary">Отмена</a>
         </form>
     </div>
 @endsection

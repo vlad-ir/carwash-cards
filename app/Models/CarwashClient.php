@@ -39,7 +39,7 @@ class CarwashClient extends Model
 
     public function bonusCards()
     {
-        return $this->hasMany(CarwashBonusCard::class);
+        return $this->hasMany(CarwashBonusCard::class, 'client_id');
     }
 
     public function invoices()
