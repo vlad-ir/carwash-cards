@@ -128,7 +128,7 @@
                             render: function (data) {
                                 return data === 'active'
                                     ? '<i class="fas fa-check text-success"></i>'
-                                    : '<i class="fas fa-times text-danger"></i>';
+                                    : '<i class="fas fa-ban text-danger"></i>';
                             },
                             orderData: [4]
                         },
@@ -138,7 +138,7 @@
                             render: function (data) {
                                 return data == 1
                                     ? '<i class="fas fa-check text-success"></i>'
-                                    : '<i class="fas fa-times text-danger"></i>';
+                                    : '<i class="fas fa-ban text-danger"></i>';
                             },
                             orderData: [5]
                         },
