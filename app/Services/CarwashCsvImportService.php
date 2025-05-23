@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\CarwashBonusCard;
 use App\Models\CarwashBonusCardStat;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+
 
 class CarwashCsvImportService
 {
@@ -25,43 +27,65 @@ class CarwashCsvImportService
         return $processed;
     }
 
+
+
     public function importCsv($filePath, $importDate)
     {
-        $csvContent = Storage::disk('public')->get($filePath);
-        $rows = array_map('str_getcsv', explode("\n", $csvContent));
+
+        $csvContent = mb_convert_encoding(Storage::disk('public')->get($filePath), 'UTF-8', 'UTF-8,Windows-1251');
+
+        $rows = [];
+        foreach (explode("\n", $csvContent) as $line) {
+            $rows[] = str_getcsv($line, ';');
+        }
         $header = array_shift($rows);
+
 
         foreach ($rows as $row) {
             if (count($row) < count($header) || empty($row[0])) {
                 continue; // Пропускаем пустые или некорректные строки
             }
 
-            $data = array_combine($header, $row);
-
             // Извлечение ID карты
-            $cardIdRaw = $data['ID карты'] ?? '';
+            $cardIdRaw = $row[1] ?? '';
             $cardId = Str::after($cardIdRaw, 'Id=');
 
-            // Поиск карты по card_number
-            $card = CarwashBonusCard::where('card_number', $cardId)->first();
+            // Поиск карты
+            $card = CarwashBonusCard::where('card_number', trim($cardId))->first();
             if (!$card) {
-                continue; // Пропускаем, если карта не найдена
+                // Log::warning("Card not found: " . $cardId);
+                continue;
+            }
+
+            // Обработка времени начала
+            $startTimeRaw = trim($row[4] ?? '');
+            if (empty($startTimeRaw) || $startTimeRaw === '--') {
+                // Log::error("Empty or invalid start time: " . $startTimeRaw);
+                continue;
             }
 
             // Обработка остатка
-            $remainingBalance = $data['Остаток'] === '--' ? null : (int)$data['Остаток'];
+            $remainingBalance = $row[5] === '--' ? null : (int)$row[5];
 
-            CarwashBonusCardStat::create([
+            // Обработка длительности
+            $durationSeconds = (int)$row[6];
+
+            // Сохранение статистики
+            $stat = CarwashBonusCardStat::create([
                 'card_id' => $card->id,
-                'card_name' => $data['Название карты'] ?? null,
-                'start_time' => $data['Время начала'],
-                'duration_seconds' => (int)$data['Длительность'],
+                'start_time' => $startTimeRaw,
+                'duration_seconds' => $durationSeconds,
                 'remaining_balance_seconds' => $remainingBalance,
                 'import_date' => $importDate,
             ]);
+
+            if (!$stat) {
+                Log::error("Failed to save stat for card ID: {$card->id}");
+            }
         }
 
         // Архивируем обработанный файл
         Storage::disk('public')->move($filePath, 'import_stat/processed/' . basename($filePath));
     }
+
 }
