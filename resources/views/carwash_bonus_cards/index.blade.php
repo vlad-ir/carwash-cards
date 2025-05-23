@@ -5,7 +5,7 @@
         <h1>Бонусные карты</h1>
 
         <div class="mb-3">
-            <a href="{{ route('carwash_bonus_cards.create') }}" class="btn btn-primary">Добавить карту</a>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBonusCardModal">Добавить карту</button>
             <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>
 
@@ -58,6 +58,140 @@
             </div>
         </div>
     </div>
+
+    <!-- Модальное окно создания бонусной карты -->
+    <div class="modal fade" id="createBonusCardModal" tabindex="-1" aria-labelledby="createBonusCardModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ route('carwash_bonus_cards.store') }}" method="POST">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createBonusCardModalLabel">Добавить бонусную карту</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="create_name" class="form-label">Название</label>
+                            <input type="text" class="form-control @error('name', 'store') is-invalid @enderror" id="create_name" name="name" value="{{ old('name', '', 'store') }}" required>
+                            @error('name', 'store')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label for="create_card_number" class="form-label">Номер карты</label>
+                            <input type="text" class="form-control @error('card_number', 'store') is-invalid @enderror" id="create_card_number" name="card_number" value="{{ old('card_number', '', 'store') }}" required>
+                            @error('card_number', 'store')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label for="create_client_id" class="form-label">Клиент</label>
+                            <select class="form-control @error('client_id', 'store') is-invalid @enderror" id="create_client_id" name="client_id" required>
+                                <option value="">Выберите клиента</option>
+                                @foreach($clients as $client)
+                                    <option value="{{ $client->id }}" {{ old('client_id', '', 'store') == $client->id ? 'selected' : '' }}>{{ $client->short_name }}</option>
+                                @endforeach
+                            </select>
+                            @error('client_id', 'store')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label for="create_rate_per_minute" class="form-label">Ставка за минуту, BYN</label>
+                            <input type="number" step="0.01" class="form-control @error('rate_per_minute', 'store') is-invalid @enderror" id="create_rate_per_minute" name="rate_per_minute" value="{{ old('rate_per_minute', '', 'store') }}" required>
+                            @error('rate_per_minute', 'store')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label for="create_status" class="form-label">Статус</label>
+                            <select class="form-control @error('status', 'store') is-invalid @enderror" id="create_status" name="status" required>
+                                <option value="active" {{ old('status', '', 'store') == 'active' ? 'selected' : '' }}>Активна</option>
+                                <option value="blocked" {{ old('status', '', 'store') == 'blocked' ? 'selected' : '' }}>Заблокирована</option>
+                            </select>
+                            @error('status', 'store')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Создать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальные окна редактирования бонусной карты -->
+    @if(isset($bonus_cards))
+        @foreach($bonus_cards as $card_instance)
+            <div class="modal fade" id="editBonusCardModal{{ $card_instance->id }}" tabindex="-1" aria-labelledby="editBonusCardModalLabel{{ $card_instance->id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form action="{{ route('carwash_bonus_cards.update', $card_instance->id) }}" method="POST">
+                            @csrf
+                            @method('PUT')
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editBonusCardModalLabel{{ $card_instance->id }}">Редактировать бонусную карту</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                {{-- <input type="hidden" name="id" value="{{ $card_instance->id }}"> --}}
+                                <div class="mb-3">
+                                    <label for="edit_name_{{ $card_instance->id }}" class="form-label">Название</label>
+                                    <input type="text" class="form-control @error('name', 'update'.$card_instance->id) is-invalid @enderror" id="edit_name_{{ $card_instance->id }}" name="name" value="{{ old('name', $card_instance->name, 'update'.$card_instance->id) }}" required>
+                                    @error('name', 'update'.$card_instance->id)
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="mb-3">
+                                    <label for="edit_card_number_{{ $card_instance->id }}" class="form-label">Номер карты</label>
+                                    <input type="text" class="form-control @error('card_number', 'update'.$card_instance->id) is-invalid @enderror" id="edit_card_number_{{ $card_instance->id }}" name="card_number" value="{{ old('card_number', $card_instance->card_number, 'update'.$card_instance->id) }}" required>
+                                    @error('card_number', 'update'.$card_instance->id)
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="mb-3">
+                                    <label for="edit_client_id_{{ $card_instance->id }}" class="form-label">Клиент</label>
+                                    <select class="form-control @error('client_id', 'update'.$card_instance->id) is-invalid @enderror" id="edit_client_id_{{ $card_instance->id }}" name="client_id" required>
+                                        <option value="">Выберите клиента</option>
+                                        @foreach($clients as $client)
+                                            <option value="{{ $client->id }}" {{ old('client_id', $card_instance->client_id, 'update'.$card_instance->id) == $client->id ? 'selected' : '' }}>{{ $client->short_name }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('client_id', 'update'.$card_instance->id)
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="mb-3">
+                                    <label for="edit_rate_per_minute_{{ $card_instance->id }}" class="form-label">Ставка за минуту, BYN</label>
+                                    <input type="number" step="0.01" class="form-control @error('rate_per_minute', 'update'.$card_instance->id) is-invalid @enderror" id="edit_rate_per_minute_{{ $card_instance->id }}" name="rate_per_minute" value="{{ old('rate_per_minute', $card_instance->rate_per_minute, 'update'.$card_instance->id) }}" required>
+                                    @error('rate_per_minute', 'update'.$card_instance->id)
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="mb-3">
+                                    <label for="edit_status_{{ $card_instance->id }}" class="form-label">Статус</label>
+                                    <select class="form-control @error('status', 'update'.$card_instance->id) is-invalid @enderror" id="edit_status_{{ $card_instance->id }}" name="status" required>
+                                        <option value="active" {{ old('status', $card_instance->status, 'update'.$card_instance->id) == 'active' ? 'selected' : '' }}>Активна</option>
+                                        <option value="blocked" {{ old('status', $card_instance->status, 'update'.$card_instance->id) == 'blocked' ? 'selected' : '' }}>Заблокирована</option>
+                                    </select>
+                                    @error('status', 'update'.$card_instance->id)
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                <button type="submit" class="btn btn-primary">Сохранить</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    @endif
 
     @push('styles')
         <style>
@@ -123,7 +257,39 @@
                                         : '<i class="fas fa-pause text-muted"></i>';
                             }
                         },
-                        { data: 'action', orderable: false, searchable: false }
+
+                        {
+                            data: 'action',
+                            orderable: false,
+                            searchable: false,
+                            render: function(data, type, row) {
+                                let showUrl = "{{ route('carwash_bonus_cards.show', ':id') }}".replace(':id', row.id);
+                                // let editUrl = "{{ route('carwash_bonus_cards.edit', ':id') }}".replace(':id', row.id);
+                                let deleteUrl = "{{ route('carwash_bonus_cards.destroy', ':id') }}".replace(':id', row.id);
+
+                                return `
+                                    <div class="action-buttons">
+                                        <a href="${showUrl}" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
+                                        <button type="button" class="btn btn-sm btn-outline-warning edit-bonus-card"
+                                                data-id="${row.id}"
+                                                data-name="${row.name}"
+                                                data-card_number="${row.card_number}"
+                                                data-id="${row.id}"
+                                data-bs-toggle="modal" data-bs-target="#editBonusCardModal${row.id}" title="Редактировать">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <form action="${deleteUrl}" method="POST" style="display:inline;">
+                                            @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger delete-single" title="Удалить"
+                                        data-card-name="${row.name}" data-card-number="${row.card_number}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                `;
+                            }
+                        }
                     ],
                     order: [[1, 'asc']],
                     initComplete: function () {
@@ -198,6 +364,57 @@
                         });
                     }
                 });
+
+                // Clear errors and handle backdrop on modal hidden event
+                $('#createBonusCardModal').on('hidden.bs.modal', function (e) {
+                    const form = $(this).find('form');
+                    if (form.length) {
+                        form[0].reset();
+                        form.find('.is-invalid').removeClass('is-invalid');
+                        form.find('.invalid-feedback').remove();
+                    }
+                });
+
+                $(document).on('hidden.bs.modal', '[id^="editBonusCardModal"]', function () {
+                    const form = $(this).find('form');
+                    if (form.length) {
+                        // Don't reset the form fields to allow Laravel's old() to work on validation error
+                        // form[0].reset();
+                        form.find('.is-invalid').removeClass('is-invalid');
+                        form.find('.invalid-feedback').remove();
+                    }
+                });
+
+
+                @if($errors->any())
+                @php
+                    $errorBagKey = null;
+                    $updateErrorCardId = null;
+
+                    // Check for errors related to the 'store' form (createBonusCardModal)
+                    if ($errors->store->any()) {
+                        $errorBagKey = 'store';
+                    } else {
+                        // Check for errors related to any 'update' form (editBonusCardModal)
+                        foreach($bonus_cards as $card_instance) {
+                            if ($errors->{'update'.$card_instance->id}->any()) {
+                                $errorBagKey = 'update'.$card_instance->id;
+                                $updateErrorCardId = $card_instance->id;
+                                break;
+                            }
+                        }
+                    }
+                @endphp
+
+                @if($errorBagKey === 'store')
+                var createModal = new bootstrap.Modal(document.getElementById('createBonusCardModal'));
+                createModal.show();
+                @elseif($updateErrorCardId)
+                var editModal = new bootstrap.Modal(document.getElementById('editBonusCardModal{{ $updateErrorCardId }}'));
+                editModal.show();
+                @endif
+                @endif
+
 
                 function updateSelectedCount() {
                     const count = selectedIds.length;

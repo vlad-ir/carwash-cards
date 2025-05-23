@@ -69,3 +69,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Auth::routes(['register' => false, 'reset' => false]);
+/*
+Route::resource('carwash_bonus_cards', CarwashBonusCardController::class)->except([
+    'create', 'edit'
+]);*/

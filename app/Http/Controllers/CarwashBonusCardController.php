@@ -12,19 +12,14 @@ class CarwashBonusCardController extends Controller
 {
     public function index(Request $request)
     {
-        return view('carwash_bonus_cards.index');
-    }
-
-    public function create()
-    {
         $clients = CarwashClient::where('status', 'active')->get();
-        return view('carwash_bonus_cards.create', compact('clients'));
+        $bonus_cards = CarwashBonusCard::with('client')->get(); // Добавить эту строку
+        return view('carwash_bonus_cards.index', compact('clients', 'bonus_cards'));
     }
 
     public function store(StoreCarwashBonusCardRequest $request)
     {
         CarwashBonusCard::create($request->validated());
-
         return redirect()->route('carwash_bonus_cards.index')
             ->with('success', 'Бонусная карта успешно добавлена.');
     }
@@ -35,19 +30,10 @@ class CarwashBonusCardController extends Controller
         return view('carwash_bonus_cards.show', compact('bonusCard'));
     }
 
-    public function edit($id)
-    {
-        $bonusCard = CarwashBonusCard::findOrFail($id);
-        $clients = CarwashClient::where('status', 'active')->get();
-
-        return view('carwash_bonus_cards.edit', compact('bonusCard', 'clients'));
-    }
-
     public function update(StoreCarwashBonusCardRequest $request, $id)
     {
         $bonusCard = CarwashBonusCard::findOrFail($id);
         $bonusCard->update($request->validated());
-
         return redirect()->route('carwash_bonus_cards.index')
             ->with('success', 'Бонусная карта успешно обновлена.');
     }
@@ -83,14 +69,47 @@ class CarwashBonusCardController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        // Обработка сортировки, включая связанное поле client_short_name
+        if ($request->has('order') && count($request->input('order'))) {
+            $orderColumnIndex = $request->input('order.0.column');
+            $orderColumnName = $request->input('columns.' . $orderColumnIndex . '.data');
+            $orderDir = $request->input('order.0.dir');
+
+            if ($orderColumnName == 'client_short_name') {
+                // Используем leftJoin, чтобы не потерять бонусные карты без клиентов (если такие возможны)
+                // или если client_id может быть NULL.
+                $query->leftJoin('carwash_clients', 'carwash_bonus_cards.client_id', '=', 'carwash_clients.id')
+                    ->orderBy('carwash_clients.short_name', $orderDir)
+                    ->select('carwash_bonus_cards.*'); // Важно выбрать все поля из основной таблицы
+            } else {
+                // Стандартная сортировка по полям основной таблицы
+                // Убедимся, что имя колонки безопасно для использования в orderBy
+                $allowedSortableColumns = ['name', 'card_number', 'status', 'rate_per_minute']; // Добавьте другие разрешенные колонки
+                if (in_array($orderColumnName, $allowedSortableColumns)) {
+                    $query->orderBy($orderColumnName, $orderDir);
+                }
+            }
+        } else {
+            // Сортировка по умолчанию, если не указана в запросе
+            $query->orderBy('carwash_bonus_cards.name', 'asc');
+        }
+
+
         return DataTables::of($query)
             ->addColumn('checkbox', fn($card) => '<input type="checkbox" class="select-row" value="' . $card->id . '">')
-            ->addColumn('client_short_name', fn($card) => $card->client->short_name ?? '-')
+            ->addColumn('client_short_name', function(CarwashBonusCard $card) { // Явное указание типа для автодополнения
+                return $card->client->short_name ?? '-';
+            })
+            ->addColumn('client_id', fn($card) => $card->client_id)
             ->addColumn('action', function ($card) {
+
                 return '
                     <div class="action-buttons">
-                        <a href="' . route('carwash_bonus_cards.show', $card->id) . '" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
-                        <a href="' . route('carwash_bonus_cards.edit', $card->id) . '" class="btn btn-sm btn-outline-warning" title="Редактировать"><i class="fas fa-edit"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-warning edit-bonus-card"
+
+                                data-bs-toggle="modal" data-bs-target="#editBonusCardModal" title="Редактировать">
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <form action="' . route('carwash_bonus_cards.destroy', $card->id) . '" method="POST" style="display:inline;">
                             ' . csrf_field() . '
                             ' . method_field('DELETE') . '
