@@ -15,10 +15,9 @@
                 <th class="no-sort"><input type="checkbox" id="selectAll"></th>
                 <th>Название</th>
                 <th>Номер карты</th>
-                <th>Скидка (%)</th>
-                <th>Баланс</th>
-                <th>Статус</th>
                 <th>Клиент</th>
+                <th>Ставка за минуту, BYN</th>
+                <th>Статус</th>
                 <th>Действия</th>
             </tr>
             </thead>
@@ -50,7 +49,6 @@
                         <select name="status" id="status_filter" class="form-control">
                             <option value="">Все</option>
                             <option value="active">Активна</option>
-                            <option value="inactive">Неактивна</option>
                             <option value="blocked">Заблокирована</option>
                         </select>
                     </div>
@@ -113,8 +111,8 @@
                         { data: 'checkbox', orderable: false, searchable: false },
                         { data: 'name' },
                         { data: 'card_number' },
-                        { data: 'discount_percentage' },
-                        { data: 'balance' },
+                        { data: 'client_short_name' },
+                        { data: 'rate_per_minute' },
                         {
                             data: 'status',
                             render: function (data) {
@@ -125,7 +123,6 @@
                                         : '<i class="fas fa-pause text-muted"></i>';
                             }
                         },
-                        { data: 'client_short_name' },
                         { data: 'action', orderable: false, searchable: false }
                     ],
                     order: [[1, 'asc']],

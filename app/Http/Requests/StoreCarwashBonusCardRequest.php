@@ -24,12 +24,8 @@ class StoreCarwashBonusCardRequest extends FormRequest
                 'max:20',
                 Rule::unique('carwash_bonus_cards', 'card_number')->ignore($bonusCardId),
             ],
-            'discount_percentage' => 'required|numeric|min:0|max:100',
-            'balance' => 'required|date_format:H:i:s',
-            'status' => 'required|in:active,inactive,blocked',
-            'car_license_plate' => 'nullable|string|max:20',
+            'status' => 'required|in:active,blocked',
             'rate_per_minute' => 'required|numeric|min:0',
-            'invoice_required' => 'boolean',
             'client_id' => 'required|exists:carwash_clients,id',
         ];
     }

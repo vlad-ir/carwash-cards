@@ -73,10 +73,6 @@ class CarwashBonusCardController extends Controller
             $query->where('card_number', 'like', '%' . $request->input('card_number') . '%');
         }
 
-        if ($request->filled('car_license_plate')) {
-            $query->where('car_license_plate', 'like', '%' . $request->input('car_license_plate') . '%');
-        }
-
         if ($request->filled('client_short_name')) {
             $query->whereHas('client', function ($q) use ($request) {
                 $q->where('short_name', 'like', '%' . $request->input('client_short_name') . '%');

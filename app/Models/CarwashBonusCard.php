@@ -14,17 +14,9 @@ class CarwashBonusCard extends Model
     protected $fillable = [
         'name',
         'card_number',
-        'discount_percentage',
-        'balance',
         'status',
-        'car_license_plate',
         'rate_per_minute',
-        'invoice_required',
         'client_id',
-    ];
-
-    protected $casts = [
-        'invoice_required' => 'boolean',
     ];
 
     public function client()
