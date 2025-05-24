@@ -2,11 +2,11 @@
 
 @section('content')
     <div class="container">
-        <h1>Статистика бонусных карт</h1>
+        <h1>Статистика по бонусным картам</h1>
         <div class="mb-3">
             <a href="{{ route('carwash_bonus_card_stats.create') }}" class="btn btn-primary">Добавить запись</a>
             <a href="{{ route('carwash_bonus_card_stats.upload') }}" class="btn btn-success">Загрузить CSV</a>
-            <button id="delete-selected" class="btn btn-danger" disabled>Удалить выбранные</button>
+            <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>
 
         <!-- Боковая панель фильтрации -->
@@ -21,6 +21,19 @@
                         <label for="start_time_filter" class="form-label">Дата начала</label>
                         <input type="date" class="form-control" id="start_time_filter" name="start_time">
                     </div>
+                    <div class="mb-3">
+                        <label for="import_date_filter" class="form-label">Дата импорта</label>
+                        <input type="date" class="form-control" id="import_date_filter" name="import_date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="card_id_filter" class="form-label">Бонусная карта</label>
+                        <select class="form-select" id="card_id_filter" name="card_id">
+                            <option value="">Все карты</option>
+                            @foreach(App\Models\CarwashBonusCard::orderBy('name')->get() as $card)
+                                <option value="{{ $card->id }}">{{ $card->name }} ({{ $card->card_number }})</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-primary">Применить</button>
                     <button type="button" id="resetFilters" class="btn btn-secondary">Сбросить</button>
                 </form>
@@ -30,19 +43,18 @@
         <table id="stats-table" class="table table-bordered">
             <thead>
             <tr>
-                <th class="no-sort"><input type="checkbox" id="select-all"></th>
-                <th>Номер карты</th>
+                <th class="no-sort"><input type="checkbox" id="selectAll"></th>
+                <th>Карта / Клиент</th>
                 <th>Время начала</th>
-                <th>Длительность (сек)</th>
-                <th>Остаток (сек)</th>
+                <th>Длительность</th>
+                <th>Остаток</th>
                 <th>Дата импорта</th>
                 <th>Действия</th>
             </tr>
             </thead>
             <tbody></tbody>
         </table>
-
-        <div id="selected-count" class="mt-3"></div>
+        {{-- Удален div#selected-count --}}
     </div>
 
     @push('styles')
@@ -68,10 +80,10 @@
                 display: flex;
             }
             .action-buttons .btn {
-                margin-right: 5px;
+                margin-right: 5px; /* Уменьшен отступ для компактности */
             }
             .action-buttons .btn i {
-                margin: 0;
+                margin: 0; /* Убираем лишние отступы у иконок */
             }
         </style>
     @endpush
@@ -88,40 +100,43 @@
                         url: '{{ route('carwash_bonus_card_stats.data') }}',
                         data: function(d) {
                             d.start_time = $('#start_time_filter').val();
+                            d.card_id = $('#card_id_filter').val();
+                            d.import_date = $('#import_date_filter').val(); // Фильтр по дате импорта
                         }
                     },
                     columns: [
                         { data: 'checkbox', orderable: false, searchable: false },
-                        { data: 'card_number', name: 'card_number' },
+                        { data: 'card_details', name: 'card.name' },
                         { data: 'start_time', name: 'start_time' },
                         { data: 'duration_seconds', name: 'duration_seconds' },
                         { data: 'remaining_balance_seconds', name: 'remaining_balance_seconds' },
                         { data: 'import_date', name: 'import_date' },
                         { data: 'action', orderable: false, searchable: false }
                     ],
-                    order: [[1, 'asc']],
+                    order: [[5, 'desc']], // Сортировка по "Дата импорта" (индекс 5)
                     initComplete: function () {
-                        const api = this.api();
+                        var api = this.api();
 
-                        // Кнопка "Фильтр"
                         var $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
                             .on('click', function () {
                                 $('#filterOffcanvas').offcanvas('show');
                             });
 
-                        // Кнопка "Сбросить фильтры"
                         var $resetFilterBtn = $('<button id="filter-reset-btn" class="btn btn-danger btn-sm ms-1" title="Сбросить фильтры"><i class="fas fa-times"></i></button>')
                             .on('click', function () {
                                 $('#start_time_filter').val('');
+                                $('#card_id_filter').val('');
+                                $('#import_date_filter').val(''); // Сброс даты импорта
                                 table.draw();
                             });
 
-                        const $filterContainer = $(api.table().container()).find('div.dataTables_filter');
+                        var $filterContainer = $(api.table().container()).find('div.dataTables_filter');
                         $filterContainer.append($filterBtn).append($resetFilterBtn);
 
-                        // Проверяем, есть ли активные фильтры
                         function hasActiveFilters() {
-                            return $('#start_time_filter').val() !== '';
+                            return $('#start_time_filter').val() !== '' ||
+                                $('#card_id_filter').val() !== '' ||
+                                $('#import_date_filter').val() !== ''; // Проверка даты импорта
                         }
 
                         function toggleResetButtonVisibility() {
@@ -136,7 +151,7 @@
 
                         toggleResetButtonVisibility();
 
-                        $('#start_time_filter').on('change input', function () {
+                        $('#start_time_filter, #card_id_filter, #import_date_filter').on('change input', function () { // Включаем import_date_filter
                             toggleResetButtonVisibility();
                         });
 
@@ -149,20 +164,34 @@
                             $(this).prop('checked', selectedIds.includes($(this).val()));
                         });
                         updateSelectedCount();
+
+                        // Логика подтверждения для одиночного удаления
+                        $('.delete-single').off('click').on('click', function (e) {
+                            e.preventDefault();
+                            const form = $(this).closest('form');
+                            const cardInfo = $(this).data('card-name')+ ' (' + $(this).data('card-number') + ')';
+                            showConfirmModal(`Вы уверены, что хотите удалить запись для карты ${cardInfo}?`, function () {
+                                form.submit();
+                            });
+                        });
                     }
                 });
 
                 function updateSelectedCount() {
-                    const count = selectedIds.length;
-                    const info = table.page.info();
-                    $('#selected-count').text(`Выбрано записей: ${count} | Всего записей: ${info.recordsTotal}`);
-                    $('#delete-selected').prop('disabled', count === 0);
+                    let count = selectedIds.length;
+                    let pageInfo = table.page.info(); // Получаем информацию о странице
+                    // Формируем текст для info, как в carwash_clients
+                    let infoText = `Выбрано записей: ${count} | Всего записей: ${pageInfo.recordsDisplay}`;
+                    // Обновляем стандартный info блок DataTables
+                    $(table.table().container()).find('.dataTables_info').html(infoText);
+                    $('#deleteSelected').prop('disabled', count === 0);
                 }
 
-                $('#select-all').on('change', function () {
-                    const checked = this.checked;
+
+                $('#selectAll').on('change', function () {
+                    let checked = this.checked;
                     $('.select-row').each(function () {
-                        const id = $(this).val();
+                        let id = $(this).val();
                         if (checked && !selectedIds.includes(id)) {
                             selectedIds.push(id);
                         } else if (!checked && selectedIds.includes(id)) {
@@ -170,24 +199,26 @@
                         }
                         $(this).prop('checked', checked);
                     });
+                    $('#deleteSelected').prop('disabled', selectedIds.length === 0);
                     updateSelectedCount();
                 });
 
-                $('#stats-table').on('change', '.select-row', function () {
-                    const id = $(this).val();
+                $(document).on('change', '.select-row', function () {
+                    let id = $(this).val();
                     if ($(this).is(':checked')) {
                         if (!selectedIds.includes(id)) selectedIds.push(id);
                     } else {
                         selectedIds = selectedIds.filter(item => item !== id);
                     }
-                    $('#select-all').prop('checked', $('.select-row:checked').length === $('.select-row').length);
+                    $('#selectAll').prop('checked', $('.select-row:checked').length === $('.select-row').length && $('.select-row').length > 0);
+                    $('#deleteSelected').prop('disabled', selectedIds.length === 0);
                     updateSelectedCount();
                 });
 
-                $('#delete-selected').on('click', function () {
+                $('#deleteSelected').on('click', function () {
                     if (selectedIds.length === 0) return;
 
-                    showConfirmModal(`Вы уверены, что хотите удалить ${selectedIds.length} записей?`, function () {
+                    showConfirmModal(`Вы уверены, что хотите удалить ${selectedIds.length} записей статистики?`, function () {
                         $.ajax({
                             url: "{{ route('carwash_bonus_card_stats.deleteSelected') }}",
                             method: 'POST',
@@ -196,38 +227,36 @@
                                 ids: selectedIds
                             },
                             success: function (response) {
-                                showToast('Успех', response.success, 'success');
+                                showToast('Успех', response.success, 'success'); // Используем response.success
                                 selectedIds = [];
-                                table.draw();
-                                updateSelectedCount();
+                                $('#deleteSelected').prop('disabled', true);
+                                $('#selectAll').prop('checked', false); // Сбрасываем главный чекбокс
+                                table.draw(); // Перерисовываем таблицу для обновления информации
                             },
-                            error: function () {
-                                showToast('Ошибка', 'Ошибка при удалении записей.', 'error');
+                            error: function (xhr) {
+                                let errorMsg = 'Ошибка при удалении записей статистики.';
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    errorMsg = xhr.responseJSON.message;
+                                }
+                                showToast('Ошибка', errorMsg, 'error');
                             }
                         });
                     });
                 });
 
-                // Применение фильтров
-                $('#filterForm').on('submit', function(e) {
+                $('#filterForm').on('submit', function (e) {
                     e.preventDefault();
                     table.draw();
                     $('#filterOffcanvas').offcanvas('hide');
                 });
 
-                // Сброс фильтров через кнопку формы
                 $('#resetFilters').on('click', function () {
                     $('#start_time_filter').val('');
+                    $('#card_id_filter').val('');
+                    $('#import_date_filter').val('');
                     table.draw();
                     $('#filterOffcanvas').offcanvas('hide');
                 });
-
-                // Также обновляем состояние кнопки "Сбросить фильтры"
-                function toggleResetButtonVisibility() {
-                    const hasFilters = $('#start_time_filter').val() !== '';
-                    $('#clear-filter-btn').toggle(hasFilters);
-                    $('#filter-btn').toggleClass('btn-secondary btn-primary', hasFilters).toggleClass('btn-primary btn-secondary', !hasFilters);
-                }
             });
         </script>
     @endpush

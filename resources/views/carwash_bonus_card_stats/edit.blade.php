@@ -4,16 +4,6 @@
     <div class="container">
         <h1>Редактировать запись статистики</h1>
 
-        @if ($errors->any())
-            <div class="alert alert-danger">
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
         <form action="{{ route('carwash_bonus_card_stats.update', $stat->id) }}" method="POST">
             @csrf
             @method('PUT')
@@ -21,33 +11,49 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="card_id" class="form-label">Бонусная карта</label>
-                        <select name="card_id" id="card_id" class="form-control" required>
+                        <select name="card_id" id="card_id" class="form-select @error('card_id') is-invalid @enderror" required>
                             @foreach ($cards as $card)
-                                <option value="{{ $card->id }}" {{ old('card_id', $stat->card_id) == $card->id ? 'selected' : '' }}>{{ $card->name }} ({{ $card->card_number }})</option>
+                                <option value="{{ $card->id }}" {{ old('card_id', $stat->card_id) == $card->id ? 'selected' : '' }}>
+                                    {{ $card->name }} ({{ $card->card_number }})
+                                </option>
                             @endforeach
                         </select>
+                        @error('card_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
-                    <div class="mb-3">
-                        <label for="card_name" class="form-label">Название карты</label>
-                        <input type="text" name="card_name" id="card_name" value="{{ old('card_name', $stat->card_name) }}" class="form-control">
-                    </div>
+
                     <div class="mb-3">
                         <label for="start_time" class="form-label">Время начала</label>
-                        <input type="datetime-local" name="start_time" id="start_time" value="{{ old('start_time', $stat->start_time->format('Y-m-d\TH:i')) }}" class="form-control" required>
+                        <input type="datetime-local" name="start_time" id="start_time" value="{{ old('start_time', $stat->start_time ? $stat->start_time->format('Y-m-d\TH:i:s') : '') }}" class="form-control @error('start_time') is-invalid @enderror" required step="1">
+                        @error('start_time')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="import_date" class="form-label">Дата импорта</label>
+                        <input type="date" name="import_date" id="import_date" value="{{ old('import_date', $stat->import_date ? $stat->import_date->format('Y-m-d') : '') }}" class="form-control @error('import_date') is-invalid @enderror" required>
+                        @error('import_date')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="duration_seconds" class="form-label">Длительность (сек)</label>
-                        <input type="number" name="duration_seconds" id="duration_seconds" value="{{ old('duration_seconds', $stat->duration_seconds) }}" class="form-control" min="0" required>
+                        <input type="number" name="duration_seconds" id="duration_seconds" value="{{ old('duration_seconds', $stat->duration_seconds) }}" class="form-control @error('duration_seconds') is-invalid @enderror" min="0" required>
+                        @error('duration_seconds')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
+
                     <div class="mb-3">
                         <label for="remaining_balance_seconds" class="form-label">Остаток (сек)</label>
-                        <input type="number" name="remaining_balance_seconds" id="remaining_balance_seconds" value="{{ old('remaining_balance_seconds', $stat->remaining_balance_seconds) }}" class="form-control" min="0">
-                    </div>
-                    <div class="mb-3">
-                        <label for="import_date" class="form-label">Дата импорта</label>
-                        <input type="date" name="import_date" id="import_date" value="{{ old('import_date', $stat->import_date->format('Y-m-d')) }}" class="form-control" required>
+                        <input type="number" name="remaining_balance_seconds" id="remaining_balance_seconds" value="{{ old('remaining_balance_seconds', $stat->remaining_balance_seconds) }}" class="form-control @error('remaining_balance_seconds') is-invalid @enderror" min="0">
+                        @error('remaining_balance_seconds')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
             </div>

@@ -20,6 +20,8 @@ class CarwashBonusCardStat extends Model
     protected $casts = [
         'start_time' => 'datetime',
         'import_date' => 'date',
+        'duration_seconds' => 'integer',
+        'remaining_balance_seconds' => 'integer',
     ];
 
     public function card()

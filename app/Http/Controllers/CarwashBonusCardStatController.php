@@ -31,8 +31,8 @@ class CarwashBonusCardStatController extends Controller
 
     public function show($id)
     {
-        $stat = CarwashBonusCardStat::with('card')->findOrFail($id);
-        return view('carwash_bonus_card_stats.show', compact('stat'));
+        return redirect()->route('carwash_bonus_card_stats.index')
+            ->with('error', 'Такой страницы не существует.');
     }
 
     public function edit($id)
@@ -67,8 +67,22 @@ class CarwashBonusCardStatController extends Controller
             $query->whereDate('start_time', $request->start_time);
         }
 
+        if ($request->filled('import_date')) { // Filter by import_date
+            $query->whereDate('import_date', $request->input('import_date'));
+        }
+
+        if ($request->filled('card_id')) {
+            $query->where('card_id', $request->input('card_id'));
+        }
+
         return DataTables::eloquent($query)
             ->addColumn('checkbox', fn($stat) => '<input type="checkbox" class="select-row" value="' . $stat->id . '">')
+            ->addColumn('card_details', function($stat) {
+                $cardName = $stat->card?->name ?? 'Без названия';
+                $clientName = $stat->card?->client?->short_name ?? 'Клиент не указан';
+                $cardNumber = $stat->card?->card_number ?? 'N/A';
+                return "{$cardName} ({$clientName}) - {$cardNumber}";
+            })
             ->addColumn('card_number', fn($stat) => $stat->card?->card_number ?? 'N/A')
             ->editColumn('start_time', fn($stat) => $stat->start_time->format('d.m.Y H:i:s'))
             ->editColumn('duration_seconds', fn($stat) => gmdate("H:i:s", $stat->duration_seconds))

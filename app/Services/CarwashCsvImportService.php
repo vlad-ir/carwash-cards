@@ -76,6 +76,16 @@ class CarwashCsvImportService
                 continue;
             }
 
+            // Проверка на дубликаты
+            $existingStat = CarwashBonusCardStat::where('card_id', $card->id)
+                ->where('start_time', $startTimeRaw)
+                ->first();
+
+            if ($existingStat) {
+                Log::info("Skipping duplicate stat entry for card_id: {$card->id} {$card->name} {$card->card_number}, start_time: {$startTimeRaw}");
+                continue; // Пропускаем создание этой записи
+            }
+
             // Обработка остатка
             $remainingBalance = $row[5] === '--' ? null : (int)$row[5];
 
