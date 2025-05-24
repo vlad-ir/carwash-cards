@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCarwashClientRequest;
 use App\Models\CarwashClient;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\Facades\DataTables;
 
 class CarwashClientController extends Controller
@@ -57,10 +58,8 @@ class CarwashClientController extends Controller
             ->with('success', 'Клиент успешно удален.');
     }
 
-    public function getClientData(Request $request)
+    private function applyFilters(Builder $query, Request $request): Builder
     {
-        $query = CarwashClient::withCount('bonusCards');
-
         if ($request->filled('name')) {
             $query->where('short_name', 'like', '%' . $request->input('name') . '%');
         }
@@ -80,7 +79,13 @@ class CarwashClientController extends Controller
         if ($request->filled('invoice_email_required')) {
             $query->where('invoice_email_required', $request->input('invoice_email_required'));
         }
+        return $query;
+    }
 
+    public function getClientData(Request $request)
+    {
+        $query = CarwashClient::withCount('bonusCards');
+        $query = $this->applyFilters($query, $request);
         $dataTable = DataTables::of($query);
 
         $dataTable->orderColumn('bonus_cards_count', function ($query, $order) {
@@ -109,6 +114,14 @@ class CarwashClientController extends Controller
             ->make(true);
     }
 
+    public function getAllClientIds(Request $request)
+    {
+        $query = CarwashClient::query();
+        $query = $this->applyFilters($query, $request);
+        $ids = $query->pluck('id');
+        return response()->json(['ids' => $ids]);
+    }
+
     public function deleteSelected(Request $request)
     {
         $request->validate([
@@ -117,7 +130,6 @@ class CarwashClientController extends Controller
         ]);
 
         CarwashClient::whereIn('id', $request->ids)->delete();
-
         return response()->json(['success' => 'Выбранные клиенты удалены.']);
     }
 }

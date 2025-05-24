@@ -6,6 +6,7 @@ use App\Models\CarwashBonusCard;
 use App\Models\CarwashClient;
 use App\Http\Requests\StoreCarwashBonusCardRequest;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\Facades\DataTables;
 
 class CarwashBonusCardController extends Controller
@@ -47,10 +48,8 @@ class CarwashBonusCardController extends Controller
             ->with('success', 'Бонусная карта успешно удалена.');
     }
 
-    public function getBonusCardData(Request $request)
+    private function applyFilters(Builder $query, Request $request): Builder
     {
-        $query = CarwashBonusCard::with('client');
-
         if ($request->filled('name')) {
             $query->where('name', 'like', '%' . $request->input('name') . '%');
         }
@@ -68,6 +67,13 @@ class CarwashBonusCardController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
         }
+        return $query;
+    }
+
+    public function getBonusCardData(Request $request)
+    {
+        $query = CarwashBonusCard::with('client');
+        $query = $this->applyFilters($query, $request);
 
         // Обработка сортировки, включая связанное поле client_short_name
         if ($request->has('order') && count($request->input('order'))) {
@@ -119,6 +125,14 @@ class CarwashBonusCardController extends Controller
             ->make(true);
     }
 
+    public function getAllBonusCardIds(Request $request)
+    {
+        $query = CarwashBonusCard::query();
+        $query = $this->applyFilters($query, $request);
+        $ids = $query->pluck('carwash_bonus_cards.id');
+        return response()->json(['ids' => $ids]);
+    }
+
     public function deleteSelected(Request $request)
     {
         $request->validate([
@@ -127,7 +141,6 @@ class CarwashBonusCardController extends Controller
         ]);
 
         CarwashBonusCard::whereIn('id', $request->ids)->delete();
-
         return response()->json(['success' => 'Выбранные бонусные карты удалены.']);
     }
 }

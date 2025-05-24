@@ -7,6 +7,7 @@ use App\Models\CarwashBonusCard;
 use App\Models\CarwashBonusCardStat;
 use App\Services\CarwashCsvImportService;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\Facades\DataTables;
 
 class CarwashBonusCardStatController extends Controller
@@ -58,10 +59,8 @@ class CarwashBonusCardStatController extends Controller
         return redirect()->route('carwash_bonus_card_stats.index')->with('success', 'Запись статистики успешно удалена.');
     }
 
-    public function getStatData(Request $request)
+    private function applyFilters(Builder $query, Request $request): Builder
     {
-        $query = CarwashBonusCardStat::with('card');
-
         // Фильтр по дате начала (точная дата или диапазон)
         if ($request->has('start_time') && $request->start_time) {
             $query->whereDate('start_time', $request->start_time);
@@ -74,6 +73,13 @@ class CarwashBonusCardStatController extends Controller
         if ($request->filled('card_id')) {
             $query->where('card_id', $request->input('card_id'));
         }
+        return $query;
+    }
+
+    public function getStatData(Request $request)
+    {
+        $query = CarwashBonusCardStat::with('card');
+        $query = $this->applyFilters($query, $request);
 
         return DataTables::eloquent($query)
             ->addColumn('checkbox', fn($stat) => '<input type="checkbox" class="select-row" value="' . $stat->id . '">')
@@ -133,5 +139,13 @@ class CarwashBonusCardStatController extends Controller
         $service->importCsv('import_stat/' . $fileName, preg_replace('/\.csv$/', '', $fileName));
 
         return redirect()->route('carwash_bonus_card_stats.index')->with('success', 'Файл успешно загружен и обработан.');
+    }
+
+    public function getAllStatIds(Request $request)
+    {
+        $query = CarwashBonusCardStat::query();
+        $query = $this->applyFilters($query, $request);
+        $ids = $query->pluck('id');
+        return response()->json(['ids' => $ids]);
     }
 }

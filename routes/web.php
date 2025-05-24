@@ -26,21 +26,25 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->group(function () {
         // Управление пользователями
         Route::post('/users/deleteSelected', [UserController::class, 'deleteSelected'])->name('users.deleteSelected');
+        Route::get('/users/get_all_ids', [UserController::class, 'getAllUserIds'])->name('users.get_all_ids');
         Route::resource('users', UserController::class)->except(['create', 'edit']);
 
         // Клиенты
         Route::post('/carwash_clients/deleteSelected', [CarwashClientController::class, 'deleteSelected'])->name('carwash_clients.deleteSelected');
         Route::get('/carwash_clients/data', [CarwashClientController::class, 'getClientData'])->name('carwash_clients.data');
+        Route::get('/carwash_clients/get_all_ids', [CarwashClientController::class, 'getAllClientIds'])->name('carwash_clients.get_all_ids');
         Route::resource('carwash_clients', CarwashClientController::class);
 
         // Бонусные карты
         Route::post('/carwash_bonus_cards/delete-selected', [CarwashBonusCardController::class, 'deleteSelected'])->name('carwash_bonus_cards.deleteSelected');
         Route::get('/carwash_bonus_cards/data', [CarwashBonusCardController::class, 'getBonusCardData'])->name('carwash_bonus_cards.data');
+        Route::get('/carwash_bonus_cards/get_all_ids', [CarwashBonusCardController::class, 'getAllBonusCardIds'])->name('carwash_bonus_cards.get_all_ids');
         Route::resource('carwash_bonus_cards', CarwashBonusCardController::class)->except(['create', 'edit']);
 
         // Статистика бонусных карт
         Route::post('/carwash_bonus_card_stats/delete-selected', [CarwashBonusCardStatController::class, 'deleteSelected'])->name('carwash_bonus_card_stats.deleteSelected');
         Route::get('/carwash_bonus_card_stats/data', [CarwashBonusCardStatController::class, 'getStatData'])->name('carwash_bonus_card_stats.data');
+        Route::get('/carwash_bonus_card_stats/get_all_ids', [CarwashBonusCardStatController::class, 'getAllStatIds'])->name('carwash_bonus_card_stats.get_all_ids');
         Route::get('/carwash_bonus_card_stats/upload', [CarwashBonusCardStatController::class, 'showUploadForm'])->name('carwash_bonus_card_stats.upload.form');
         Route::post('/carwash_bonus_card_stats/upload', [CarwashBonusCardStatController::class, 'upload'])->name('carwash_bonus_card_stats.upload');
         Route::resource('carwash_bonus_card_stats', CarwashBonusCardStatController::class);

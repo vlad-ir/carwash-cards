@@ -230,6 +230,7 @@
         <script>
             $(document).ready(function () {
                 let selectedIds = [];
+                let allRecordsGloballySelected = false;
 
                 const table = $('#bonusCardsTable').DataTable({
                     processing: true,
@@ -322,6 +323,7 @@
                             $(this).prop('checked', selectedIds.includes($(this).val()));
                         });
                         updateSelectedCount();
+                        updateSelectAllCheckboxState(); // Added call
 
                         $('.delete-single').off('click').on('click', function (e) {
                             e.preventDefault();
@@ -403,6 +405,36 @@
                     $('.dataTables_info').text(`${statusText} | Всего записей: ${info.recordsTotal}`);
                 }
 
+                function updateSelectAllCheckboxState() {
+                    if (allRecordsGloballySelected) {
+                        $('#selectAll').prop('indeterminate', false).prop('checked', true);
+                        return;
+                    }
+                    let allVisibleRows = table.rows({ page: 'current' }).nodes().to$().find('.select-row');
+                    if (allVisibleRows.length === 0) {
+                        $('#selectAll').prop('indeterminate', false).prop('checked', false);
+                        return;
+                    }
+                    let allVisibleChecked = allVisibleRows.filter(':checked').length;
+                    let allVisibleCount = allVisibleRows.length;
+
+                    if (allVisibleChecked === 0) {
+                        if (selectedIds.length > 0) {
+                            $('#selectAll').prop('indeterminate', true).prop('checked', false);
+                        } else {
+                            $('#selectAll').prop('indeterminate', false).prop('checked', false);
+                        }
+                    } else if (allVisibleChecked === allVisibleCount) {
+                        if (selectedIds.length > allVisibleChecked && !allRecordsGloballySelected) {
+                            $('#selectAll').prop('indeterminate', true).prop('checked', false);
+                        } else {
+                            $('#selectAll').prop('indeterminate', false).prop('checked', true);
+                        }
+                    } else {
+                        $('#selectAll').prop('indeterminate', true).prop('checked', false);
+                    }
+                }
+
                 // Применение фильтров
                 $('#filterForm').on('submit', function(e) {
                     e.preventDefault();
@@ -417,31 +449,56 @@
                     $('#filterOffcanvas').offcanvas('hide');
                 });
 
-                $('#selectAll').on('change', function () {
-                    const checked = this.checked;
-                    $('.select-row').each(function () {
-                        const id = $(this).val();
-                        if (checked && !selectedIds.includes(id)) {
-                            selectedIds.push(id);
-                        } else if (!checked && selectedIds.includes(id)) {
-                            selectedIds = selectedIds.filter(item => item !== id);
-                        }
-                        $(this).prop('checked', checked);
-                    });
-                    $('#deleteSelected').prop('disabled', selectedIds.length === 0);
-                    updateSelectedCount();
+                $('#selectAll').on('change', function() {
+                    let isChecked = $(this).prop('checked');
+                    if (isChecked) {
+                        $.ajax({
+                            url: "{{ route('carwash_bonus_cards.get_all_ids') }}", // Имя маршрута для бонусных карт
+                            method: 'GET',
+                            data: { // Параметры фильтров для бонусных карт
+                                name: $('#name_filter').val(),
+                                card_number: $('#card_number_filter').val(),
+                                client_short_name: $('#client_short_name_filter').val(),
+                                status: $('#status_filter').val()
+                            },
+                            success: function(response) {
+                                selectedIds = response.ids.map(id => String(id));
+                                allRecordsGloballySelected = true;
+                                $('.select-row').prop('checked', true);
+                                updateSelectedCount();
+                                updateSelectAllCheckboxState();
+                                $('#deleteSelected').prop('disabled', selectedIds.length === 0);
+                            },
+                            error: function(xhr) {
+                                console.error("Ошибка при получении всех ID бонусных карт:", xhr);
+                                showToast('Ошибка', 'Не удалось получить все ID для выбора бонусных карт.', 'error');
+                                $('#selectAll').prop('checked', false);
+                                allRecordsGloballySelected = false;
+                            }
+                        });
+                    } else {
+                        selectedIds = [];
+                        allRecordsGloballySelected = false;
+                        $('.select-row').prop('checked', false);
+                        updateSelectedCount();
+                        updateSelectAllCheckboxState();
+                        $('#deleteSelected').prop('disabled', true);
+                    }
                 });
 
-                $(document).on('change', '.select-row', function () {
-                    const id = $(this).val();
-                    if ($(this).is(':checked')) {
-                        if (!selectedIds.includes(id)) selectedIds.push(id);
+                $(document).on('change', '.select-row', function() {
+                    allRecordsGloballySelected = false;
+                    let id = $(this).val();
+                    if ($(this).prop('checked')) {
+                        if (!selectedIds.includes(id)) {
+                            selectedIds.push(id);
+                        }
                     } else {
                         selectedIds = selectedIds.filter(item => item !== id);
                     }
-                    $('#selectAll').prop('checked', $('.select-row:checked').length === $('.select-row').length);
-                    $('#deleteSelected').prop('disabled', selectedIds.length === 0);
                     updateSelectedCount();
+                    updateSelectAllCheckboxState();
+                    $('#deleteSelected').prop('disabled', selectedIds.length === 0);
                 });
 
                 $('#deleteSelected').on('click', function () {
@@ -458,6 +515,7 @@
                             success: function (response) {
                                 showToast('Успех', response.success, 'success');
                                 selectedIds = [];
+                                allRecordsGloballySelected = false; // Added line
                                 $('#deleteSelected').prop('disabled', true);
                                 table.draw();
                             },

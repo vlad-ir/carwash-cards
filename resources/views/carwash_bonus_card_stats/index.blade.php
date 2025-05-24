@@ -54,7 +54,6 @@
             </thead>
             <tbody></tbody>
         </table>
-        {{-- Удален div#selected-count --}}
     </div>
 
     @push('styles')
@@ -92,6 +91,7 @@
         <script>
             $(document).ready(function () {
                 let selectedIds = [];
+                let allRecordsGloballySelected = false; // Added global flag
 
                 var table = $('#stats-table').DataTable({
                     processing: true,
@@ -161,9 +161,11 @@
                     },
                     drawCallback: function () {
                         $('.select-row').each(function () {
-                            $(this).prop('checked', selectedIds.includes($(this).val()));
+                            // Ensure IDs are strings for comparison if selectedIds contains strings
+                            $(this).prop('checked', selectedIds.includes(String($(this).val())));
                         });
                         updateSelectedCount();
+                        updateSelectAllCheckboxState(); // Existing call, ensure it's the final logic
 
                         // Логика подтверждения для одиночного удаления
                         $('.delete-single').off('click').on('click', function (e) {
@@ -189,30 +191,101 @@
 
 
                 $('#selectAll').on('change', function () {
-                    let checked = this.checked;
-                    $('.select-row').each(function () {
-                        let id = $(this).val();
-                        if (checked && !selectedIds.includes(id)) {
-                            selectedIds.push(id);
-                        } else if (!checked && selectedIds.includes(id)) {
-                            selectedIds = selectedIds.filter(item => item !== id);
-                        }
-                        $(this).prop('checked', checked);
-                    });
-                    $('#deleteSelected').prop('disabled', selectedIds.length === 0);
-                    updateSelectedCount();
+                    let isChecked = this.checked;
+
+                    if (isChecked) {
+                        // Perform AJAX GET request
+                        $.ajax({
+                            url: '{{ route('carwash_bonus_card_stats.get_all_ids') }}', // Ensure this route is correct
+                            method: 'GET',
+                            data: {
+                                start_time: $('#start_time_filter').val(),
+                                card_id: $('#card_id_filter').val(),
+                                import_date: $('#import_date_filter').val()
+                            },
+                            success: function(response) {
+                                selectedIds = response.ids.map(String) || []; // Ensure IDs are strings
+                                allRecordsGloballySelected = true; // Set flag on successful global select
+                                // Check all .select-row on the current page
+                                table.rows({ page: 'current' }).nodes().to$().find('.select-row').prop('checked', true);
+                                $('#deleteSelected').prop('disabled', selectedIds.length === 0);
+                                updateSelectedCount();
+                                updateSelectAllCheckboxState(); // Update #selectAll state based on new global selection
+                            },
+                            error: function(xhr) {
+                                console.error("Error fetching all stat IDs:", xhr);
+                                showToast('Ошибка', 'Не удалось получить все ID записей.', 'error');
+                                // Rollback UI changes
+                                selectedIds = []; // Clear selection as operation failed
+                                allRecordsGloballySelected = false; // Reset flag on error
+                                table.rows({ page: 'current' }).nodes().to$().find('.select-row').prop('checked', false);
+                                $('#deleteSelected').prop('disabled', true);
+                                updateSelectedCount();
+                                updateSelectAllCheckboxState(); // Reset #selectAll state
+                            }
+                        });
+                    } else {
+                        // Clear selectedIds
+                        selectedIds = [];
+                        allRecordsGloballySelected = false; // Reset flag when unchecking selectAll
+                        // Uncheck all .select-row on the current page
+                        table.rows({ page: 'current' }).nodes().to$().find('.select-row').prop('checked', false);
+                        $('#deleteSelected').prop('disabled', true);
+                        updateSelectedCount();
+                        updateSelectAllCheckboxState(); // Update #selectAll state
+                    }
                 });
 
+                // Финальная, более простая логика для #selectAll
+                function updateSelectAllCheckboxState() {
+                    if (allRecordsGloballySelected) {
+                        $('#selectAll').prop('indeterminate', false).prop('checked', true);
+                        return;
+                    }
+                    let allVisibleRows = table.rows({ page: 'current' }).nodes().to$().find('.select-row');
+                    let allVisibleChecked = allVisibleRows.filter(':checked').length;
+                    let allVisibleCount = allVisibleRows.length;
+
+                    if (allVisibleCount === 0) { // No rows on the current page
+                        $('#selectAll').prop('indeterminate', false).prop('checked', false);
+                        return;
+                    }
+
+                    if (allVisibleChecked === 0) {
+                        if (selectedIds.length > 0) { // Selected on other pages
+                            $('#selectAll').prop('indeterminate', true).prop('checked', false);
+                        } else { // Nothing selected anywhere
+                            $('#selectAll').prop('indeterminate', false).prop('checked', false);
+                        }
+                    } else if (allVisibleChecked === allVisibleCount) {
+                        // All visible are checked.
+                        if (selectedIds.length > allVisibleChecked) { // Selected on this page + other pages
+                            $('#selectAll').prop('indeterminate', true).prop('checked', false);
+                        } else if (selectedIds.length === allVisibleChecked) { // All globally selected are on this page and checked
+                            $('#selectAll').prop('indeterminate', false).prop('checked', true);
+                        } else {
+                            // This case (selectedIds.length < allVisibleChecked) should not happen
+                            // if selectedIds is correctly managed. Defaulting to checked if all visible are checked.
+                            $('#selectAll').prop('indeterminate', false).prop('checked', true);
+                        }
+                    } else { // Some visible are checked
+                        $('#selectAll').prop('indeterminate', true).prop('checked', false);
+                    }
+                }
+
                 $(document).on('change', '.select-row', function () {
-                    let id = $(this).val();
+                    allRecordsGloballySelected = false; // Reset flag on individual row interaction
+                    let id = String($(this).val()); // Ensure ID is a string
                     if ($(this).is(':checked')) {
-                        if (!selectedIds.includes(id)) selectedIds.push(id);
+                        if (!selectedIds.includes(id)) {
+                            selectedIds.push(id);
+                        }
                     } else {
                         selectedIds = selectedIds.filter(item => item !== id);
                     }
-                    $('#selectAll').prop('checked', $('.select-row:checked').length === $('.select-row').length && $('.select-row').length > 0);
                     $('#deleteSelected').prop('disabled', selectedIds.length === 0);
                     updateSelectedCount();
+                    updateSelectAllCheckboxState(); // Call the new logic
                 });
 
                 $('#deleteSelected').on('click', function () {
@@ -230,8 +303,8 @@
                                 showToast('Успех', response.success, 'success'); // Используем response.success
                                 selectedIds = [];
                                 $('#deleteSelected').prop('disabled', true);
-                                $('#selectAll').prop('checked', false); // Сбрасываем главный чекбокс
-                                table.draw(); // Перерисовываем таблицу для обновления информации
+                                table.draw(); // Redraw table, drawCallback will call updateSelectAllCheckboxState
+                                allRecordsGloballySelected = false; // Reset flag after deletion
                             },
                             error: function (xhr) {
                                 let errorMsg = 'Ошибка при удалении записей статистики.';

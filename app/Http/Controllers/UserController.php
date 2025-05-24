@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -14,19 +15,7 @@ class UserController extends Controller
     {
         if ($request->ajax()) {
             $query = User::with('roles');
-
-            // Применяем фильтры
-            if ($request->has('name') && !empty($request->name)) {
-                $query->where('name', 'like', '%' . $request->name . '%');
-            }
-            if ($request->has('email') && !empty($request->email)) {
-                $query->where('email', 'like', '%' . $request->email . '%');
-            }
-            if ($request->has('role') && !empty($request->role)) {
-                $query->whereHas('roles', function($q) use ($request) {
-                    $q->where('name', $request->role);
-                });
-            }
+            $query = $this->applyFilters($query, $request);
 
             // Добавляем сортировку по ролям
             if ($request->has('order') && $request->input('order.0.column') == 3) { // 3 - индекс колонки ролей
@@ -144,5 +133,30 @@ class UserController extends Controller
 
         User::whereIn('id', $ids)->delete();
         return response()->json(['success' => true]);
+    }
+
+    private function applyFilters(Builder $query, Request $request): Builder
+    {
+        // Применяем фильтры
+        if ($request->has('name') && !empty($request->name)) {
+            $query->where('name', 'like', '%' . $request->name . '%');
+        }
+        if ($request->has('email') && !empty($request->email)) {
+            $query->where('email', 'like', '%' . $request->email . '%');
+        }
+        if ($request->has('role') && !empty($request->role)) {
+            $query->whereHas('roles', function($q) use ($request) {
+                $q->where('name', $request->role);
+            });
+        }
+        return $query;
+    }
+
+    public function getAllUserIds(Request $request)
+    {
+        $query = User::query();
+        $query = $this->applyFilters($query, $request);
+        $ids = $query->pluck('id');
+        return response()->json(['ids' => $ids]);
     }
 }
