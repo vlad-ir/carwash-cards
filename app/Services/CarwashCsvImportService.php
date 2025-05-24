@@ -82,7 +82,7 @@ class CarwashCsvImportService
                 ->first();
 
             if ($existingStat) {
-                Log::info("Skipping duplicate stat entry for card_id: {$card->id} {$card->name} {$card->card_number}, start_time: {$startTimeRaw}");
+                //Log::info("Skipping duplicate stat entry for card_id: {$card->id} {$card->name} {$card->card_number}, start_time: {$startTimeRaw}");
                 continue; // Пропускаем создание этой записи
             }
 
