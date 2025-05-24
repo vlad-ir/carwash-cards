@@ -63,7 +63,7 @@
     <div class="modal fade" id="createBonusCardModal" tabindex="-1" aria-labelledby="createBonusCardModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="{{ route('carwash_bonus_cards.store') }}" method="POST">
+                <form action="{{ route('carwash_bonus_cards.store') }}" method="POST" id="createBonusCardForm">
                     @csrf
                     <div class="modal-header">
                         <h5 class="modal-title" id="createBonusCardModalLabel">Добавить бонусную карту</h5>
@@ -129,7 +129,7 @@
             <div class="modal fade" id="editBonusCardModal{{ $card_instance->id }}" tabindex="-1" aria-labelledby="editBonusCardModalLabel{{ $card_instance->id }}" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <form action="{{ route('carwash_bonus_cards.update', $card_instance->id) }}" method="POST">
+                        <form action="{{ route('carwash_bonus_cards.update', $card_instance->id) }}" method="POST" id="editBonusCardForm{{ $card_instance->id }}">
                             @csrf
                             @method('PUT')
                             <div class="modal-header">
@@ -137,7 +137,6 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                {{-- <input type="hidden" name="id" value="{{ $card_instance->id }}"> --}}
                                 <div class="mb-3">
                                     <label for="edit_name_{{ $card_instance->id }}" class="form-label">Название</label>
                                     <input type="text" class="form-control @error('name', 'update'.$card_instance->id) is-invalid @enderror" id="edit_name_{{ $card_instance->id }}" name="name" value="{{ old('name', $card_instance->name, 'update'.$card_instance->id) }}" required>
@@ -173,9 +172,12 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="edit_status_{{ $card_instance->id }}" class="form-label">Статус</label>
+                                    @php
+                                        $resolved_status = strtolower(trim(old('status', $card_instance->status)));
+                                    @endphp
                                     <select class="form-control @error('status', 'update'.$card_instance->id) is-invalid @enderror" id="edit_status_{{ $card_instance->id }}" name="status" required>
-                                        <option value="active" {{ old('status', $card_instance->status, 'update'.$card_instance->id) == 'active' ? 'selected' : '' }}>Активна</option>
-                                        <option value="blocked" {{ old('status', $card_instance->status, 'update'.$card_instance->id) == 'blocked' ? 'selected' : '' }}>Заблокирована</option>
+                                        <option value="active" @if($resolved_status == 'active') selected @endif>Активна</option>
+                                        <option value="blocked" @if($resolved_status == 'blocked') selected @endif>Заблокирована</option>
                                     </select>
                                     @error('status', 'update'.$card_instance->id)
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -257,39 +259,7 @@
                                         : '<i class="fas fa-pause text-muted"></i>';
                             }
                         },
-
-                        {
-                            data: 'action',
-                            orderable: false,
-                            searchable: false,
-                            render: function(data, type, row) {
-                                let showUrl = "{{ route('carwash_bonus_cards.show', ':id') }}".replace(':id', row.id);
-                                // let editUrl = "{{ route('carwash_bonus_cards.edit', ':id') }}".replace(':id', row.id);
-                                let deleteUrl = "{{ route('carwash_bonus_cards.destroy', ':id') }}".replace(':id', row.id);
-
-                                return `
-                                    <div class="action-buttons">
-                                        <a href="${showUrl}" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
-                                        <button type="button" class="btn btn-sm btn-outline-warning edit-bonus-card"
-                                                data-id="${row.id}"
-                                                data-name="${row.name}"
-                                                data-card_number="${row.card_number}"
-                                                data-id="${row.id}"
-                                data-bs-toggle="modal" data-bs-target="#editBonusCardModal${row.id}" title="Редактировать">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <form action="${deleteUrl}" method="POST" style="display:inline;">
-                                            @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger delete-single" title="Удалить"
-                                        data-card-name="${row.name}" data-card-number="${row.card_number}">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                `;
-                            }
-                        }
+                        { data: 'action', name: 'action', orderable: false, searchable: false }
                     ],
                     order: [[1, 'asc']],
                     initComplete: function () {
@@ -375,6 +345,10 @@
                     }
                 });
 
+                // For dynamically generated edit modals, attach event listener to a static parent if needed,
+                // or rely on Bootstrap's default behavior for form reset if forms are not re-used.
+                // If using Laravel's old() and error directives, the state will be handled on page reload.
+                // The main thing is to clear validation classes if the modal is simply closed without submitting.
                 $(document).on('hidden.bs.modal', '[id^="editBonusCardModal"]', function () {
                     const form = $(this).find('form');
                     if (form.length) {
@@ -385,6 +359,12 @@
                     }
                 });
 
+
+                // Logic to potentially open the correct edit modal if validation fails
+                // This assumes that Laravel redirects back with an error, and we might want to reopen the modal.
+                // This can be complex. For now, we'll rely on standard form error display.
+                // Example: if (session('error_card_id')) { $('#editBonusCardModal' + session('error_card_id')).modal('show'); }
+                // This would require passing 'error_card_id' from the controller on validation failure.
 
                 @if($errors->any())
                 @php

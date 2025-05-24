@@ -26,7 +26,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->group(function () {
         // Управление пользователями
         Route::post('/users/deleteSelected', [UserController::class, 'deleteSelected'])->name('users.deleteSelected');
-        Route::resource('users', UserController::class);
+        Route::resource('users', UserController::class)->except(['create', 'edit']);
 
         // Клиенты
         Route::post('/carwash_clients/deleteSelected', [CarwashClientController::class, 'deleteSelected'])->name('carwash_clients.deleteSelected');
@@ -36,7 +36,7 @@ Route::middleware(['auth'])->group(function () {
         // Бонусные карты
         Route::post('/carwash_bonus_cards/delete-selected', [CarwashBonusCardController::class, 'deleteSelected'])->name('carwash_bonus_cards.deleteSelected');
         Route::get('/carwash_bonus_cards/data', [CarwashBonusCardController::class, 'getBonusCardData'])->name('carwash_bonus_cards.data');
-        Route::resource('carwash_bonus_cards', CarwashBonusCardController::class);
+        Route::resource('carwash_bonus_cards', CarwashBonusCardController::class)->except(['create', 'edit']);
 
         // Статистика бонусных карт
         Route::post('/carwash_bonus_card_stats/delete-selected', [CarwashBonusCardStatController::class, 'deleteSelected'])->name('carwash_bonus_card_stats.deleteSelected');
@@ -69,7 +69,3 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Auth::routes(['register' => false, 'reset' => false]);
-/*
-Route::resource('carwash_bonus_cards', CarwashBonusCardController::class)->except([
-    'create', 'edit'
-]);*/

@@ -13,7 +13,7 @@ class CarwashBonusCardController extends Controller
     public function index(Request $request)
     {
         $clients = CarwashClient::where('status', 'active')->get();
-        $bonus_cards = CarwashBonusCard::with('client')->get(); // Добавить эту строку
+        $bonus_cards = CarwashBonusCard::with('client')->get();
         return view('carwash_bonus_cards.index', compact('clients', 'bonus_cards'));
     }
 
@@ -26,8 +26,8 @@ class CarwashBonusCardController extends Controller
 
     public function show($id)
     {
-        $bonusCard = CarwashBonusCard::with('client')->findOrFail($id);
-        return view('carwash_bonus_cards.show', compact('bonusCard'));
+        return redirect()->route('carwash_bonus_cards.index')
+            ->with('error', 'Такой страницы не существует.');
     }
 
     public function update(StoreCarwashBonusCardRequest $request, $id)
@@ -101,21 +101,19 @@ class CarwashBonusCardController extends Controller
                 return $card->client->short_name ?? '-';
             })
             ->addColumn('client_id', fn($card) => $card->client_id)
-            ->addColumn('action', function ($card) {
-
-                return '
-                    <div class="action-buttons">
-                        <button type="button" class="btn btn-sm btn-outline-warning edit-bonus-card"
-
-                                data-bs-toggle="modal" data-bs-target="#editBonusCardModal" title="Редактировать">
-                            <i class="fas fa-edit"></i>
+            ->addColumn('action', function (CarwashBonusCard $card) {
+                $editBtn = '<button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editBonusCardModal' . $card->id . '" title="Редактировать"><i class="fas fa-edit"></i></button>';
+                $deleteForm = '
+                    <form action="' . route('carwash_bonus_cards.destroy', $card->id) . '" method="POST" style="display:inline;" class="delete-form">
+                        ' . csrf_field() . '
+                        ' . method_field('DELETE') . '
+                        <button type="submit" class="btn btn-sm btn-outline-danger delete-single" title="Удалить"
+                                data-card-name="' . htmlspecialchars($card->name) . '"
+                                data-card-number="' . htmlspecialchars($card->card_number) . '">
+                            <i class="fas fa-trash"></i>
                         </button>
-                        <form action="' . route('carwash_bonus_cards.destroy', $card->id) . '" method="POST" style="display:inline;">
-                            ' . csrf_field() . '
-                            ' . method_field('DELETE') . '
-                            <button type="submit" class="btn btn-sm btn-outline-danger delete-single" title="Удалить" data-card-name="' . htmlspecialchars($card->name) . '" data-card-number="' . htmlspecialchars($card->card_number) . '"><i class="fas fa-trash"></i></button>
-                        </form>
-                    </div>';
+                    </form>';
+                return '<div class="action-buttons">' . $editBtn . ' ' . $deleteForm . '</div>';
             })
             ->rawColumns(['checkbox', 'action'])
             ->make(true);

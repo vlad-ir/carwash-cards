@@ -50,7 +50,7 @@ class UserController extends Controller
                 ->addColumn('action', function($user) {
                     $buttons = '<div class="action-buttons">';
                     $buttons .= '<button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal' . $user->id . '"><i class="fas fa-edit"></i></button>';
-                    
+
                     if ($user->id !== auth()->id()) {
                         $buttons .= '<form action="' . route('users.destroy', $user) . '" method="POST" class="d-inline">';
                         $buttons .= csrf_field();
@@ -58,7 +58,7 @@ class UserController extends Controller
                         $buttons .= '<button type="submit" class="btn btn-sm btn-danger delete-single" data-user-name="' . $user->name . '"><i class="fas fa-trash"></i></button>';
                         $buttons .= '</form>';
                     }
-                    
+
                     $buttons .= '</div>';
                     return $buttons;
                 })
@@ -89,6 +89,12 @@ class UserController extends Controller
         $user->roles()->attach($request->roles);
 
         return redirect()->route('users.index')->with('success', 'Пользователь успешно создан');
+    }
+
+    public function show($id)
+    {
+        return redirect()->route('users.index')
+            ->with('error', 'Такой страницы не существует.');
     }
 
     public function update(Request $request, User $user)
