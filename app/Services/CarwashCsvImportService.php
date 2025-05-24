@@ -57,6 +57,18 @@ class CarwashCsvImportService
                 continue;
             }
 
+            // Поиск номера поста. Если номер поста 4 - химчистка, то пропускаем эту запись
+            if ((int)$row[3] === 4) {
+                // Log::warning("Пост 4 - химчистка. Импорт пропущен.");
+                continue;
+            }
+
+            $card = CarwashBonusCard::where('card_number', trim($cardId))->first();
+            if (!$card) {
+                // Log::warning("Card not found: " . $cardId);
+                continue;
+            }
+
             // Обработка времени начала
             $startTimeRaw = trim($row[4] ?? '');
             if (empty($startTimeRaw) || $startTimeRaw === '--') {
