@@ -97,7 +97,7 @@ class CarwashBonusCardStatController extends Controller
     {
         $ids = $request->input('ids');
         CarwashBonusCardStat::whereIn('id', $ids)->delete();
-        return response()->json(['status' => 'success']);
+        return response()->json(['success' => 'Выбранные записи удалены.']);
     }
 
     public function showUploadForm()
