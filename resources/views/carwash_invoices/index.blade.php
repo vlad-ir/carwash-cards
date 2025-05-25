@@ -53,33 +53,6 @@
         <div id="selected-count" class="mt-3"></div>
     </div>
 
-    @push('styles')
-        <style>
-            .filter-panel {
-                position: fixed;
-                top: 0;
-                right: -300px;
-                width: 300px;
-                height: 100%;
-                background-color: #fff;
-                box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
-                transition: right 0.3s;
-                z-index: 1000;
-            }
-            .filter-panel-header {
-                padding: 10px;
-                background-color: #f8f9fa;
-                border-bottom: 1px solid #dee2e6;
-            }
-            .filter-panel-body {
-                padding: 20px;
-            }
-            .filter-panel.active {
-                right: 0;
-            }
-        </style>
-    @endpush
-
     @push('scripts')
         <script>
             $(document).ready(function() {

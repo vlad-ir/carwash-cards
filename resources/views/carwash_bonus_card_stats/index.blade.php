@@ -56,37 +56,6 @@
         </table>
     </div>
 
-    @push('styles')
-        <style>
-            .no-sort,
-            .no-sort:hover,
-            .no-sort:active,
-            .no-sort:focus {
-                background-image: none !important;
-                background: none !important;
-                cursor: default !important;
-                user-select: none !important;
-            }
-            .dataTables_filter {
-                display: flex;
-                align-items: center;
-                justify-content: end;
-            }
-            .dataTables_filter .btn-filter {
-                margin-left: 5px;
-            }
-            .action-buttons {
-                display: flex;
-            }
-            .action-buttons .btn {
-                margin-right: 5px; /* Уменьшен отступ для компактности */
-            }
-            .action-buttons .btn i {
-                margin: 0; /* Убираем лишние отступы у иконок */
-            }
-        </style>
-    @endpush
-
     @push('scripts')
         <script>
             $(document).ready(function () {
