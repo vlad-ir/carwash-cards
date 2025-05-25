@@ -41,33 +41,45 @@
                 <ul class="navbar-nav ms-auto">
                     @auth
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('carwash_dashboard') }}">Главная</a>
+                            <a class="nav-link {{ Request::is('carwash_dashboard') ? 'active' : '' }}" href="{{ route('carwash_dashboard') }}">Главная</a>
                         </li>
                         @if(auth()->user()->roles()->where('name', 'admin')->exists())
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ route('users.index') }}">Пользователи</a>
+                                <a class="nav-link {{ Request::is('users*') ? 'active' : '' }}" href="{{ route('users.index') }}">Пользователи</a>
                             </li>
                         @endif
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('carwash_clients.index') }}">Клиенты</a>
+                            <a class="nav-link {{ Request::is('carwash_clients*') ? 'active' : '' }}" href="{{ route('carwash_clients.index') }}">Клиенты</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('carwash_bonus_cards.index') }}">Бонусные карты</a>
+                            <a class="nav-link {{ Request::is('carwash_bonus_cards*') ? 'active' : '' }}" href="{{ route('carwash_bonus_cards.index') }}">Бонусные карты</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('carwash_bonus_card_stats.index') }}">Статистика</a>
+                            <a class="nav-link {{ Request::is('carwash_bonus_card_stats*') ? 'active' : '' }}" href="{{ route('carwash_bonus_card_stats.index') }}">Статистика</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('carwash_invoices.index') }}">Счета</a>
+                            <a class="nav-link {{ Request::is('carwash_invoices*') ? 'active' : '' }}" href="{{ route('carwash_invoices.index') }}">Счета</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-danger" href="{{ route('logout') }}"
-                               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                Выйти
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user me-1"></i> {{ Auth::user()->name }}
                             </a>
-                            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                                @csrf
-                            </form>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+                                <li>
+                                    <a class="dropdown-item disabled" href="#" tabindex="-1" aria-disabled="true">
+                                        <strong>Роли:</strong> {{ Auth::user()->roles->pluck('description')->implode(', ') }}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('logout') }}"
+                                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                        Выйти <i class="fas fa-right-from-bracket"></i>
+                                    </a>
+                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                                        @csrf
+                                    </form>
+                                </li>
+                            </ul>
                         </li>
                     @else
                         <li class="nav-item">
@@ -76,7 +88,6 @@
                     @endauth
                 </ul>
             </div>
-
         </div>
     </nav>
 
@@ -95,7 +106,7 @@
 
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.2.3/js/buttons.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script src="{{ asset('js/datatables.js') }}"></script>
 <script src="{{ asset('js/common.js') }}"></script>
 @stack('scripts')
