@@ -15,9 +15,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('client_id')->constrained('carwash_clients')->onDelete('cascade');
             $table->decimal('amount', 10, 2);
+            $table->integer('total_cards_count');
+            $table->integer('active_cards_count');
+            $table->integer('blocked_cards_count');
             $table->date('period_start');
             $table->date('period_end');
-            $table->string('pdf_path')->nullable();
+            $table->string('file_path')->nullable();
             $table->timestamp('sent_at')->nullable();
             $table->timestamps();
         });

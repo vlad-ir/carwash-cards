@@ -8,13 +8,14 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 class Kernel extends ConsoleKernel
 {
     protected $commands = [
-        \App\Console\Commands\CarwashCsvImportStatsCommand::class
+        \App\Console\Commands\CarwashCsvImportStatsCommand::class,
+        \App\Console\Commands\CarwashGenerateInvoicesCommand::class,
     ];
 
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('carwash:csv-import-stats')->dailyAt('01:00');
-        $schedule->command('carwash:invoices-generate')->daily();
+        $schedule->command('carwash:invoices-generate')->dailyAt('03:00');
     }
 
     protected function commands()

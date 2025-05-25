@@ -12,9 +12,12 @@ class CarwashInvoice extends Model
     protected $fillable = [
         'client_id',
         'amount',
+        'total_cards_count',
+        'active_cards_count',
+        'blocked_cards_count',
         'period_start',
         'period_end',
-        'pdf_path',
+        'file_path',
         'sent_at',
     ];
 

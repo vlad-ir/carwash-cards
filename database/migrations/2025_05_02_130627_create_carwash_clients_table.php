@@ -19,7 +19,7 @@ class CreateCarwashClientsTable extends Migration
             $table->string('bank_bic');
             $table->enum('status', ['active', 'blocked'])->default('active');
             $table->boolean('invoice_email_required')->default(true);
-            $table->date('invoice_email_date')->nullable();
+            $table->integer('invoice_email_day')->nullable();
             $table->string('postal_address');
             $table->string('bank_postal_address');
             $table->timestamps();
