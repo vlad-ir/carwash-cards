@@ -86,11 +86,11 @@ class CarwashCsvImportService
                 continue; // Пропускаем создание этой записи
             }
 
-            // Обработка остатка
-            $remainingBalance = $row[5] === '--' ? null : (int)$row[5];
-
             // Обработка длительности
-            $durationSeconds = (int)$row[6];
+            $durationSeconds = (int)$row[5];
+
+            // Обработка остатка
+            $remainingBalance = $row[6] === '--' ? null : (int)$row[6];
 
             // Сохранение статистики
             $stat = CarwashBonusCardStat::create([
