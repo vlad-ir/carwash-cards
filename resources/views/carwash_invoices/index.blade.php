@@ -156,5 +156,4 @@
 
 @push('scripts')
     {{-- Add any specific scripts for this page if needed, e.g., for date pickers or DataTables if used --}}
-    {{-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script> --}} {{-- If not already in layouts.app --}}
 @endpush
