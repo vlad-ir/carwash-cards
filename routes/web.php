@@ -51,7 +51,8 @@ Route::middleware(['auth'])->group(function () {
 
         // Счета
         Route::post('/carwash_invoices/deleteSelected', [CarwashInvoiceController::class, 'deleteSelected'])->name('carwash_invoices.deleteSelected');
-        Route::get('/carwash_invoices/data', [CarwashInvoiceController::class, 'getInvoiceData'])->name('carwash_invoices.data');
+        Route::get('/carwash_invoices/data', [CarwashInvoiceController::class, 'getInvoicesData'])->name('carwash_invoices.data');
+        Route::get('/carwash_invoices/get_all_ids', [CarwashInvoiceController::class, 'getAllInvoiceIds'])->name('carwash_invoices.get_all_ids');
         Route::resource('carwash_invoices', CarwashInvoiceController::class)->except(['edit', 'update']);
     });
 

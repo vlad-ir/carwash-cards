@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Class CarwashInvoiceController
@@ -32,16 +33,27 @@ class CarwashInvoiceController extends Controller
     }
 
     /**
-     * Display a listing of the invoices with filtering options.
+     * Display a listing of the invoices.
+     * Data will be fetched via AJAX by DataTables.
      *
-     * @param Request $request
      * @return \Illuminate\View\View
      */
-    public function index(Request $request): View
+    public function index(): View
     {
-        $query = CarwashInvoice::with('client')->orderBy('sent_at', 'desc');
+        // Filters will be passed to the view to pre-fill the filter form if needed
+        // but the actual data loading and filtering is done by getInvoicesData
+        return view('carwash_invoices.index');
+    }
 
-        // Apply filters
+    /**
+     * Apply filters to the invoice query.
+     *
+     * @param Builder $query
+     * @param Request $request
+     * @return Builder
+     */
+    private function applyInvoiceFilters(Builder $query, Request $request): Builder
+    {
         if ($request->filled('client_name')) {
             $query->whereHas('client', function ($q) use ($request) {
                 $q->where('short_name', 'like', '%' . $request->input('client_name') . '%');
@@ -53,7 +65,7 @@ class CarwashInvoiceController extends Controller
                 $periodStartDate = Carbon::parse($request->input('period_start'))->startOfMonth();
                 $query->where('period_start', '>=', $periodStartDate);
             } catch (\Exception $e) {
-                // Silently ignore invalid date format for filters, or add error handling
+                // Silently ignore for now
             }
         }
 
@@ -62,7 +74,7 @@ class CarwashInvoiceController extends Controller
                 $periodEndDate = Carbon::parse($request->input('period_end'))->endOfMonth();
                 $query->where('period_end', '<=', $periodEndDate);
             } catch (\Exception $e) {
-                // Silently ignore invalid date format
+                // Silently ignore
             }
         }
 
@@ -71,16 +83,72 @@ class CarwashInvoiceController extends Controller
                 $invoiceDate = Carbon::parse($request->input('invoice_date'))->toDateString();
                 $query->whereDate('sent_at', $invoiceDate);
             } catch (\Exception $e) {
-                // Silently ignore invalid date format
+                // Silently ignore
             }
         }
+        return $query;
+    }
 
-        $invoices = $query->paginate(15);
+    /**
+     * Provide data for DataTables AJAX calls for invoices.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
+     */
+    public function getInvoicesData(Request $request): JsonResponse
+    {
+        $query = CarwashInvoice::with('client:id,short_name')->select('carwash_invoices.*'); // Select all from invoices table
 
-        return view('carwash_invoices.index', [
-            'invoices' => $invoices,
-            'filters' => $request->only(['client_name', 'period_start', 'period_end', 'invoice_date']),
-        ]);
+        $query = $this->applyInvoiceFilters($query, $request);
+
+        return DataTables::of($query)
+            ->addColumn('checkbox', fn($invoice) => '<input type="checkbox" class="select-row" value="' . $invoice->id . '">')
+            ->addColumn('client_id', fn($invoice) => $invoice->client_id)
+            ->addColumn('client_short_name', fn($invoice) => $invoice->client->short_name ?? 'N/A')
+            ->editColumn('period_start', fn($invoice) => Carbon::parse($invoice->period_start)->isoFormat('MMMM YYYY'))
+            ->editColumn('period_end', fn($invoice) => Carbon::parse($invoice->period_end)->isoFormat('MMMM YYYY'))
+            ->editColumn('sent_at', fn($invoice) => $invoice->sent_at ? Carbon::parse($invoice->sent_at)->format('d.m.Y') : 'N/A')
+            ->addColumn('file_link', function($invoice) {
+                if ($invoice->file_path) {
+                    $fileName = basename($invoice->file_path);
+                    $relativePath = 'invoices/' . $fileName;
+                    if (Storage::disk('public')->exists($relativePath)) {
+                        return '<a href="'.Storage::disk('public')->url($relativePath).'" target="_blank" class="btn btn-sm btn-outline-success"><i class="fas fa-file-excel"></i> XLS</a>';
+                    }
+                }
+                return '<span class="text-muted">Нет файла</span>';
+            })
+            ->addColumn('action', function (CarwashInvoice $invoice) { // Route model binding not directly usable here, but type hint is good
+                return '
+                    <div class="action-buttons">
+                        <a href="' . route('carwash_invoices.show', $invoice->id) . '" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
+                        <form action="' . route('carwash_invoices.destroy', $invoice->id) . '" method="POST" style="display:inline;" class="delete-form">
+                            ' . csrf_field() . '
+                            ' . method_field('DELETE') . '
+                            <button type="submit" class="btn btn-sm btn-outline-danger delete-single"
+                                    title="Удалить" data-invoice-id="' . $invoice->id . '">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>';
+            })
+            ->rawColumns(['checkbox', 'action', 'file_link'])
+            ->make(true);
+    }
+
+    /**
+     * Get all invoice IDs matching the current filters.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAllInvoiceIds(Request $request): JsonResponse
+    {
+        $query = CarwashInvoice::query();
+        $query = $this->applyInvoiceFilters($query, $request);
+        $ids = $query->pluck('id')->toArray();
+        return response()->json(['ids' => $ids]);
     }
 
     /**
@@ -126,46 +194,46 @@ class CarwashInvoiceController extends Controller
     /**
      * Display the specified invoice.
      *
-     * @param string $id
+     * @param \App\Models\CarwashInvoice $carwashInvoice
      * @return \Illuminate\View\View
      */
-    public function show(string $id): View
+    public function show(CarwashInvoice $carwashInvoice): View // Route model binding
     {
-        $invoice = CarwashInvoice::with('client')->findOrFail($id);
+        // $carwashInvoice is already loaded via Route Model Binding
+        // Ensure client is loaded if accessed in view, though getInvoicesData loads it.
+        $carwashInvoice->loadMissing('client:id,short_name');
 
-        $invoice->download_url = null;
-        if ($invoice->file_path) {
-            $relativePath = 'invoices/' . basename($invoice->file_path);
+        $carwashInvoice->download_url = null;
+        if ($carwashInvoice->file_path) {
+            $relativePath = 'invoices/' . basename($carwashInvoice->file_path);
             if (Storage::disk('public')->exists($relativePath)) {
-                $invoice->download_url = Storage::disk('public')->url($relativePath);
+                $carwashInvoice->download_url = Storage::disk('public')->url($relativePath);
             }
         }
-        return view('carwash_invoices.show', compact('invoice'));
+        return view('carwash_invoices.show', ['invoice' => $carwashInvoice]); // Pass as 'invoice' for consistency if view expects that
     }
 
     /**
      * Remove the specified invoice from storage.
      *
-     * @param string $id
+     * @param \App\Models\CarwashInvoice $carwashInvoice
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function destroy(string $id): RedirectResponse
+    public function destroy(CarwashInvoice $carwashInvoice): RedirectResponse // Route model binding
     {
-        $invoice = CarwashInvoice::findOrFail($id);
-        if ($invoice->file_path) {
+        if ($carwashInvoice->file_path) {
             $publicPathBase = storage_path('app/public/');
-            // Check if file_path starts with the public base path
-            if (strpos($invoice->file_path, $publicPathBase) === 0) {
-                $relativePathInsidePublic = str_replace($publicPathBase, '', $invoice->file_path);
+            if (strpos($carwashInvoice->file_path, $publicPathBase) === 0) {
+                $relativePathInsidePublic = str_replace($publicPathBase, '', $carwashInvoice->file_path);
                 if (Storage::disk('public')->exists($relativePathInsidePublic)) {
                     Storage::disk('public')->delete($relativePathInsidePublic);
                 }
             }
         }
-        $invoice->delete();
+        $carwashInvoice->delete();
 
         return redirect()->route('carwash_invoices.index')
-            ->with('success', 'Счет успешно удален.');
+            ->with('success', 'Счет #' . $carwashInvoice->id . ' успешно удален.');
     }
 
     /**
@@ -182,6 +250,7 @@ class CarwashInvoiceController extends Controller
         ]);
 
         $publicPathBase = storage_path('app/public/');
+        $deletedCount = 0;
         foreach ($request->ids as $id) {
             $invoice = CarwashInvoice::find($id);
             if ($invoice) {
@@ -192,69 +261,13 @@ class CarwashInvoiceController extends Controller
                     }
                 }
                 $invoice->delete();
+                $deletedCount++;
             }
         }
-        return response()->json(['success' => 'Выбранные счета удалены.']);
+        return response()->json(['success' => "Выбрано счетов для удаления: {$deletedCount}. Успешно удалено."]);
     }
 
-    /**
-     * Provide data for DataTables AJAX calls.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Exception
-     */
-    public function getInvoiceData(Request $request): JsonResponse
-    {
-        $query = CarwashInvoice::with('client');
-
-        if ($request->filled('client_name')) {
-            $query->whereHas('client', function ($q) use ($request) {
-                $q->where('short_name', 'like', '%' . $request->input('client_name') . '%');
-            });
-        }
-        if ($request->filled('period_start')) {
-            $query->whereDate('period_start', '>=', Carbon::parse($request->input('period_start'))->startOfMonth());
-        }
-        if ($request->filled('period_end')) {
-            $query->whereDate('period_end', '<=', Carbon::parse($request->input('period_end'))->endOfMonth());
-        }
-        if ($request->filled('invoice_date')) {
-            $query->whereDate('sent_at', '=', Carbon::parse($request->input('invoice_date')));
-        }
-        if ($request->has('sent_status') && !empty($request->sent_status)) {
-            if ($request->sent_status === 'sent') {
-                $query->whereNotNull('sent_at');
-            } elseif ($request->sent_status === 'not_sent') {
-                $query->whereNull('sent_at');
-            }
-        }
-
-        return DataTables::of($query)
-            ->addColumn('checkbox', fn($invoice) => '<input type="checkbox" class="select-row" value="' . $invoice->id . '">')
-            ->editColumn('client.short_name', fn($invoice) => $invoice->client->short_name ?? 'N/A')
-            ->editColumn('period_start', fn($invoice) => Carbon::parse($invoice->period_start)->isoFormat('MMMM YYYY'))
-            ->editColumn('period_end', fn($invoice) => Carbon::parse($invoice->period_end)->isoFormat('MMMM YYYY'))
-            ->editColumn('sent_at', fn($invoice) => $invoice->sent_at ? Carbon::parse($invoice->sent_at)->format('d.m.Y') : 'N/A')
-            ->addColumn('file_link', function($invoice){
-                if ($invoice->file_path) {
-                    $relativePath = 'invoices/' . basename($invoice->file_path);
-                    if (Storage::disk('public')->exists($relativePath)) {
-                        return '<a href="'.Storage::disk('public')->url($relativePath).'" target="_blank">Скачать XLS</a>';
-                    }
-                }
-                return 'Нет файла';
-            })
-            ->addColumn('action', function ($invoice) {
-                return '
-                    <a href="' . route('carwash_invoices.show', $invoice->id) . '" class="btn btn-primary btn-sm">Просмотр</a>
-                    <form action="' . route('carwash_invoices.destroy', $invoice->id) . '" method="POST" style="display:inline;">
-                        ' . csrf_field() . '
-                        ' . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm(\'Вы уверены?\')">Удалить</button>
-                    </form>';
-            })
-            ->rawColumns(['checkbox', 'action', 'file_link'])
-            ->make(true);
-    }
+    // The old getInvoiceData is replaced by getInvoicesData for DataTables
+    // If the old one was used by something else, it might need to be kept or that other part updated.
+    // For this task, I am replacing it with the new DataTables source method.
 }
