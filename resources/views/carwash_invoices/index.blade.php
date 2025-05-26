@@ -4,7 +4,7 @@
         <h1>Счета на оплату</h1>
         <div class="mb-3">
             @if (Route::has('carwash_invoices.create'))
-                <a href="{{ route('carwash_invoices.create') }}" class="btn btn-primary">Создать счет вручную</a>
+                <a href="{{ route('carwash_invoices.create') }}" class="btn btn-primary">Создать счет</a>
             @endif
             <button id="deleteSelectedInvoices" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>

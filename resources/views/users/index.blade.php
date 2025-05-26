@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="container">
-        <h1>Управление пользователями</h1>
+        <h1>Пользователи</h1>
 
         <div class="mb-3">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">Добавить пользователя</button>
