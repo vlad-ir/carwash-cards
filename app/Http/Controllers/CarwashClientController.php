@@ -122,6 +122,24 @@ class CarwashClientController extends Controller
         return response()->json(['ids' => $ids]);
     }
 
+    public function getClientBonusCardsData(Request $request, $clientId)
+    {
+        $client = CarwashClient::findOrFail($clientId);
+        $bonusCards = $client->bonusCards(); // Получаем Builder, а не коллекцию
+
+        return DataTables::of($bonusCards)
+            ->addColumn('name', fn($card) => $card->name)
+            ->addColumn('card_number', fn($card) => $card->card_number)
+            ->addColumn('status', function ($card) {
+                return $card->status === 'active'
+                    ? '<i class="fas fa-check text-success"></i>'
+                    : '<i class="fas fa-ban text-danger"></i>';
+            })
+            ->addColumn('rate_per_minute', fn($card) => $card->rate_per_minute ? number_format($card->rate_per_minute, 2, ',', ' ') : '-')
+            ->rawColumns(['status'])
+            ->make(true);
+    }
+
     public function deleteSelected(Request $request)
     {
         $request->validate([

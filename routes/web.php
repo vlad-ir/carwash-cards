@@ -33,6 +33,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/carwash_clients/deleteSelected', [CarwashClientController::class, 'deleteSelected'])->name('carwash_clients.deleteSelected');
         Route::get('/carwash_clients/data', [CarwashClientController::class, 'getClientData'])->name('carwash_clients.data');
         Route::get('/carwash_clients/get_all_ids', [CarwashClientController::class, 'getAllClientIds'])->name('carwash_clients.get_all_ids');
+        Route::get('/carwash-clients/{clientId}/bonus-cards-data', [CarwashClientController::class, 'getClientBonusCardsData'])->name('carwash_clients.bonus_cards_data');
         Route::resource('carwash_clients', CarwashClientController::class);
 
         // Бонусные карты

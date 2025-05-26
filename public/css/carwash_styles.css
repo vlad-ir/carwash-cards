@@ -46,3 +46,33 @@ table.dataTable thead th {
 .navbar-dark .navbar-nav .nav-link.active {
     font-weight: bold;
 }
+
+/* Стили для контейнера подтаблицы */
+td.bonus-cards-details {
+    padding: 10px 20px !important; /* Добавляем внутренние отступы */
+    background-color: #f9f9f9; /* Слегка другой фон для выделения */
+    border-top: 1px solid #ddd; /* Линия сверху для отделения от родительской строки */
+}
+
+/* Улучшение для прелоадера, если он используется внутри td.bonus-cards-details */
+td.bonus-cards-details .fa-spinner {
+    font-size: 1.5em; /* Немного увеличим иконку спиннера */
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+td.bonus-cards-details div[style*="text-align:center"] {
+    padding: 15px; /* Увеличим отступы для прелоадера */
+}
+
+/* Стиль для ячеек управления в основной таблице, чтобы курсор был pointer */
+#clientsTable td.sub-table-arr {
+    cursor: pointer;
+}
+
+/* Если стрелка находится внутри dt-control, можно добавить ей небольшой отступ */
+#clientsTable td.sub-table-arr i.toggle-details {
+    margin-left: 5px;
+    transition: transform 0.2s ease-in-out; /* Плавный поворот стрелки */
+}
+

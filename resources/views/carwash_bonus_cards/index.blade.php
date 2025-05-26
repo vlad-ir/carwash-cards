@@ -16,7 +16,7 @@
                 <th>Название</th>
                 <th>Номер карты</th>
                 <th>Клиент</th>
-                <th>Ставка за минуту, BYN</th>
+                <th>Цена за минуту, BYN</th>
                 <th>Статус</th>
                 <th>Действия</th>
             </tr>
@@ -97,7 +97,7 @@
                             @enderror
                         </div>
                         <div class="mb-3">
-                            <label for="create_rate_per_minute" class="form-label">Ставка за минуту, BYN</label>
+                            <label for="create_rate_per_minute" class="form-label">Цена за минуту, BYN</label>
                             <input type="number" step="0.01" class="form-control @error('rate_per_minute', 'store') is-invalid @enderror" id="create_rate_per_minute" name="rate_per_minute" value="{{ old('rate_per_minute', '', 'store') }}" required>
                             @error('rate_per_minute', 'store')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -164,7 +164,7 @@
                                     @enderror
                                 </div>
                                 <div class="mb-3">
-                                    <label for="edit_rate_per_minute_{{ $card_instance->id }}" class="form-label">Ставка за минуту, BYN</label>
+                                    <label for="edit_rate_per_minute_{{ $card_instance->id }}" class="form-label">Цена за минуту, BYN</label>
                                     <input type="number" step="0.01" class="form-control @error('rate_per_minute', 'update'.$card_instance->id) is-invalid @enderror" id="edit_rate_per_minute_{{ $card_instance->id }}" name="rate_per_minute" value="{{ old('rate_per_minute', $card_instance->rate_per_minute, 'update'.$card_instance->id) }}" required>
                                     @error('rate_per_minute', 'update'.$card_instance->id)
                                     <div class="invalid-feedback">{{ $message }}</div>
