@@ -7,7 +7,6 @@
             <a href="{{ route('carwash_clients.create') }}" class="btn btn-primary">Добавить клиента</a>
             <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>
-
         <table id="clientsTable" class="table table-bordered table-hover dataTable no-footer">
             <thead class="bg-light">
             <tr>
@@ -72,9 +71,8 @@
     @push('scripts')
         <script>
             $(document).ready(function () {
-                let selectedIds = [];
+                let selectedIds = []; // Эта строка уже должна быть там.
                 let allRecordsGloballySelected = false;
-                let openedRow = null;
 
                 var table = $('#clientsTable').DataTable({
                     processing: true,
@@ -96,27 +94,32 @@
                         { data: 'unp', defaultContent: '-' },
                         {
                             data: 'status',
+                            name: 'status',
                             render: function (data) {
                                 return data === 'active'
                                     ? '<i class="fas fa-check text-success"></i>'
                                     : '<i class="fas fa-ban text-danger"></i>';
-                            }
+                            },
+                            orderData: [4]
                         },
                         {
                             data: 'invoice_email_required',
+                            name: 'invoice_email_required',
                             render: function (data) {
                                 return data == 1
                                     ? '<i class="fas fa-check text-success"></i>'
                                     : '<i class="fas fa-ban text-danger"></i>';
-                            }
+                            },
+                            orderData: [5]
                         },
                         { data: 'invoice_email_day', defaultContent: '-' },
                         {
                             data: 'bonus_cards_count',
+                            name: 'bonus_cards_count',
                             orderable: true,
                             searchable: false,
-                            className: 'sub-table-arr',
                             defaultContent: '0',
+                            className: 'dt-control', // Важно для стандартного обработчика child rows в DataTables
                             render: function (data, type, row) {
                                 if (type === 'display' && data > 0) {
                                     return data + ' <i class="fas fa-chevron-right toggle-details"></i>';
@@ -129,26 +132,33 @@
                     ],
                     order: [[1, 'asc']],
                     initComplete: function () {
-                        const api = this.api();
-                        const $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
+                        var api = this.api();
+
+                        // Кнопка "Фильтр"
+                        var $filterBtn = $('<button id="filter-btn" class="btn btn-secondary btn-sm btn-filter"><i class="fas fa-filter"></i> Фильтр</button>')
                             .on('click', function () {
                                 $('#filterOffcanvas').offcanvas('show');
                             });
-                        const $resetFilterBtn = $('<button id="filter-reset-btn" class="btn btn-danger btn-sm ms-1" title="Сбросить фильтры"><i class="fas fa-times"></i></button>')
+
+                        // Кнопка "Сбросить фильтры"
+                        var $resetFilterBtn = $('<button id="filter-reset-btn" class="btn btn-danger btn-sm ms-1" title="Сбросить фильтры"><i class="fas fa-times"></i></button>')
                             .on('click', function () {
                                 $('#name, #email, #unp, #status, #invoice_email_required').val('');
                                 table.draw();
                             });
 
-                        const $filterContainer = $(api.table().container()).find('div.dataTables_filter');
+                        // Добавляем кнопки
+                        var $filterContainer = $(api.table().container()).find('div.dataTables_filter');
                         $filterContainer.append($filterBtn).append($resetFilterBtn);
 
+                        // Функция проверяет, есть ли установленные фильтры
                         function hasActiveFilters() {
                             return $('#name, #email, #unp, #status, #invoice_email_required').filter(function () {
-                                return $(this).val();
+                                return $(this).val(); // Возвращает true, если значение не пустое
                             }).length > 0;
                         }
 
+                        // Функция обновляет видимость кнопки сброса
                         function toggleResetButtonVisibility() {
                             if (hasActiveFilters()) {
                                 $resetFilterBtn.show();
@@ -159,16 +169,20 @@
                             }
                         }
 
+                        // Вызываем при загрузке
                         toggleResetButtonVisibility();
 
+                        // Вызываем после применения фильтров
                         $('#filterForm').on('submit', function () {
                             setTimeout(toggleResetButtonVisibility, 100);
                         });
 
+                        // Вызываем при изменении любого поля фильтрации
                         $('#name, #email, #unp, #status, #invoice_email_required').on('change input', function () {
                             toggleResetButtonVisibility();
                         });
 
+                        // Также вызываем после перерисовки таблицы
                         table.on('draw', function () {
                             toggleResetButtonVisibility();
                         });
@@ -178,7 +192,8 @@
                             $(this).prop('checked', selectedIds.includes($(this).val()));
                         });
                         updateSelectedCount();
-                        updateSelectAllCheckboxState();
+                        updateSelectAllCheckboxState(); // Added call
+
                         $('.delete-single').off('click').on('click', function (e) {
                             e.preventDefault();
                             const form = $(this).closest('form');
@@ -209,6 +224,7 @@
                     }
                     let allVisibleChecked = allVisibleRows.filter(':checked').length;
                     let allVisibleCount = allVisibleRows.length;
+
                     if (allVisibleChecked === 0) {
                         if (selectedIds.length > 0) {
                             $('#selectAll').prop('indeterminate', true).prop('checked', false);
@@ -238,20 +254,20 @@
                     $('#filterOffcanvas').offcanvas('hide');
                 });
 
-                $('#selectAll').on('change', function () {
+                $('#selectAll').on('change', function() {
                     let isChecked = $(this).prop('checked');
                     if (isChecked) {
                         $.ajax({
-                            url: "{{ route('carwash_clients.get_all_ids') }}",
+                            url: "{{ route('carwash_clients.get_all_ids') }}", // Имя маршрута для клиентов
                             method: 'GET',
-                            data: {
+                            data: { // Параметры фильтров для клиентов
                                 name: $('#name').val(),
                                 email: $('#email').val(),
                                 unp: $('#unp').val(),
                                 status: $('#status').val(),
                                 invoice_email_required: $('#invoice_email_required').val()
                             },
-                            success: function (response) {
+                            success: function(response) {
                                 selectedIds = response.ids.map(id => String(id));
                                 allRecordsGloballySelected = true;
                                 $('.select-row').prop('checked', true);
@@ -259,9 +275,9 @@
                                 updateSelectAllCheckboxState();
                                 $('#deleteSelected').prop('disabled', selectedIds.length === 0);
                             },
-                            error: function (xhr) {
+                            error: function(xhr) {
                                 console.error("Ошибка при получении всех ID клиентов:", xhr);
-                                alert('Не удалось получить все ID для выбора клиентов.');
+                                showToast('Ошибка', 'Не удалось получить все ID для выбора клиентов.', 'error');
                                 $('#selectAll').prop('checked', false);
                                 allRecordsGloballySelected = false;
                             }
@@ -276,7 +292,7 @@
                     }
                 });
 
-                $(document).on('change', '.select-row', function () {
+                $(document).on('change', '.select-row', function() {
                     allRecordsGloballySelected = false;
                     let id = $(this).val();
                     if ($(this).prop('checked')) {
@@ -293,7 +309,8 @@
 
                 $('#deleteSelected').on('click', function () {
                     if (selectedIds.length === 0) return;
-                    if (confirm(`Вы уверены, что хотите удалить ${selectedIds.length} клиент(ов)?`)) {
+
+                    showConfirmModal(`Вы уверены, что хотите удалить ${selectedIds.length} клиент(ов)?`, function () {
                         $.ajax({
                             url: "{{ route('carwash_clients.deleteSelected') }}",
                             method: 'POST',
@@ -302,52 +319,63 @@
                                 ids: selectedIds
                             },
                             success: function (response) {
-                                alert(response.success);
+                                showToast('Успех', response.success, 'success');
                                 selectedIds = [];
-                                allRecordsGloballySelected = false;
+                                allRecordsGloballySelected = false; // Added line
                                 $('#deleteSelected').prop('disabled', true);
                                 table.draw();
                             },
                             error: function () {
-                                alert('Ошибка при удалении клиентов.');
+                                showToast('Ошибка', 'Ошибка при удалении клиентов.', 'error');
                             }
                         });
-                    }
+                    });
                 });
 
-                // Обработчик клика для открытия подтаблицы
-                $('#clientsTable tbody').on('click', 'td.sub-table-arr', function () {
-                    const tr = $(this).closest('tr');
-                    const row = table.row(tr);
+                let openedRow = null; // Для отслеживания открытой строки (аккордеон)
+
+                $('#clientsTable tbody').on('click', 'td.dt-control i.toggle-details, td.dt-control', function (event) {
+                    // Если клик был по иконке, this будет иконкой. Нам нужна ячейка td, а затем строка tr.
+                    // Если клик был по ячейке (благодаря dt-control), this будет td.
+                    let td = $(this).closest('td.dt-control');
+                    let tr = td.closest('tr');
+                    let row = table.row(tr);
+                    let clientId = row.data().id; // Убедись, что в данных ряда есть 'id' клиента
+
+                    if (!clientId) {
+                        console.error('Client ID not found in row data:', row.data());
+                        alert('Не удалось получить ID клиента для загрузки карт.');
+                        return;
+                    }
+
+                    // Логика аккордеона: закрыть ранее открытую строку, если она не текущая
+                    if (openedRow && openedRow.id() !== row.id()) {
+                        let previousTr = $(openedRow.node());
+                        previousTr.find('i.toggle-details').removeClass('fa-chevron-down').addClass('fa-chevron-right');
+                        openedRow.child.hide();
+                        // $(openedRow.node()).removeClass('dt-hasChild'); // DataTables должна сама управлять этим классом
+                        openedRow = null;
+                    }
 
                     if (row.child.isShown()) {
-                        // Закрываем уже открытую подтаблицу
-                        tr.find('i.toggle-details').removeClass('fa-chevron-down').addClass('fa-chevron-right');
+                        // Эта строка уже открыта - закрываем ее
+                        td.find('i.toggle-details').removeClass('fa-chevron-down').addClass('fa-chevron-right');
                         row.child.hide();
                         openedRow = null;
                     } else {
-                        // Если есть другая открытая строка — закрываем её
-                        if (openedRow) {
-                            const prevTr = $(openedRow.node());
-                            prevTr.find('i.toggle-details').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                            openedRow.child.hide();
-                        }
+                        // Открываем эту строку
+                        td.find('i.toggle-details').removeClass('fa-chevron-right').addClass('fa-chevron-down');
 
-                        const clientId = row.data().id;
-                        if (!clientId) {
-                            console.error('ID клиента не найден.');
-                            return;
-                        }
-
+                        // Создаем контейнер для подтаблицы
                         const detailContainerId = `clientBonusCardsTable_${clientId}`;
+                        // Показываем прелоадер
+                        row.child('<div style="text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin fa-2x"></i> <span style="vertical-align:middle; margin-left:10px;">Загрузка данных...</span></div>').show();
+                        $(row.child()).addClass('bonus-cards-details');
 
-                        row.child(`<div style="text-align:center; padding:10px;">
-                                      <i class="fas fa-spinner fa-spin fa-2x"></i>
-                                      <span style="vertical-align:middle; margin-left:10px;">Загрузка данных...</span>
-                                   </div>`).show();
-
-                        setTimeout(() => {
-                            row.child(`<table id="${detailContainerId}" class="table table-sm table-bordered" style="width:100%;"></table>`).show();
+                        // Загружаем и инициализируем подтаблицу
+                        setTimeout(function() {
+                            // Заменяем прелоадер на контейнер таблицы
+                            $(row.child()).html(`<table id="${detailContainerId}" class="table table-sm table-bordered" style="width:100%;"></table>`);
 
                             $('#' + detailContainerId).DataTable({
                                 processing: true,
@@ -357,41 +385,22 @@
                                     { data: 'name', title: 'Название карты', defaultContent: '-' },
                                     { data: 'card_number', title: 'Номер карты', defaultContent: '-' },
                                     { data: 'rate_per_minute', title: 'Цена за минуту, BYN', defaultContent: '-', className: 'text-end' },
-                                    { data: 'status', title: 'Статус', defaultContent: '-' },
-                                    /*                                    {
-                                                                            data: 'action',
-                                                                            title: 'Действия',
-                                                                            orderable: false,
-                                                                            searchable: false,
-                                                                            render: function (data, type, row) {
-                                                                                return `
-                                                                                <a href="/bonus_cards/${row.id}/edit" class="btn btn-sm btn-outline-warning" title="Редактировать">
-                                                                                    <i class="fas fa-edit"></i>
-                                                                                </a>
-                                                                                <form action="/bonus_cards/${row.id}" method="POST" style="display:inline;">
-@csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>`
-                                }
-                            }*/
+                                    { data: 'status', title: 'Статус', defaultContent: '-' }
                                 ],
                                 dom: 't',
                                 searching: false,
                                 paging: false,
                                 info: false,
-                                ordering: false
+                                ordering: false,
+                                language: $.fn.dataTable.defaults.language
                             });
                         }, 100);
 
-                        tr.find('i.toggle-details').removeClass('fa-chevron-right').addClass('fa-chevron-down');
                         openedRow = row;
                     }
+                    event.stopPropagation();
                 });
             });
-
         </script>
     @endpush
 @endsection
