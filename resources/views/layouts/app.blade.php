@@ -101,15 +101,18 @@
 <script src="{{ asset('js/common.js') }}"></script>
 @stack('scripts')
 
+@if (session('success'))
 <script>
     $(document).ready(function() {
-        @if (session('success'))
         showToast('Успех', '{{ session('success') }}', 'success');
-        @elseif (session('error'))
-        showToast('Ошибка', '{{ session('error') }}', 'error');
-        @endif
     });
 </script>
-
+@elseif (session('error'))
+<script>
+    $(document).ready(function() {
+        showToast('Ошибка', '{{ session('error') }}', 'error');
+    });
+</script>
+@endif
 </body>
 </html>
