@@ -9,8 +9,8 @@
             <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>
 
-        <table id="bonusCardsTable" class="table table-bordered">
-            <thead>
+        <table id="bonusCardsTable" class="table table-bordered table-hover dataTable no-footer">
+            <thead class="bg-light">
             <tr>
                 <th class="no-sort"><input type="checkbox" id="selectAll"></th>
                 <th>Название</th>

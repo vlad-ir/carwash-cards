@@ -10,8 +10,8 @@
         </div>
 
 
-        <table id="usersTable" class="table table-bordered">
-            <thead>
+        <table id="usersTable" class="table table-bordered table-hover dataTable no-footer">
+            <thead class="bg-light">
             <tr>
                 <th class="no-sort"><input type="checkbox" id="selectAll"></th>
                 <th>Имя</th>

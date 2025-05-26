@@ -7,8 +7,8 @@
             <a href="{{ route('carwash_clients.create') }}" class="btn btn-primary">Добавить клиента</a>
             <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>
-        <table id="clientsTable" class="table table-bordered">
-            <thead>
+        <table id="clientsTable" class="table table-bordered table-hover dataTable no-footer">
+            <thead class="bg-light">
             <tr>
                 <th class="no-sort"><input type="checkbox" id="selectAll"></th>
                 <th>Краткое имя</th>

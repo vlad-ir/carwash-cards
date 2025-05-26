@@ -36,8 +36,8 @@
                 @endif
 
                 <div class="table-responsive">
-                    <table id="invoicesTable" class="table table-bordered table-striped table-hover" style="width:100%;">
-                        <thead>
+                    <table id="invoicesTable" class="table table-bordered table-hover dataTable no-footer" style="width:100%;">
+                        <thead class="bg-light">
                         <tr>
                             <th class="no-sort text-center" style="width: 30px;"><input type="checkbox" id="selectAllInvoices"></th>
                             <th>ID Клиента</th>
