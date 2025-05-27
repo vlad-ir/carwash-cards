@@ -227,7 +227,7 @@
                                     : data === 'blocked'
                                         ? '<i class="fas fa-ban text-danger"></i>'
                                         : '<i class="fas fa-pause text-muted"></i>';
-                            }
+                            }, className: 'text-center'
                         },
                         { data: 'action', name: 'action', orderable: false, searchable: false }
                     ],

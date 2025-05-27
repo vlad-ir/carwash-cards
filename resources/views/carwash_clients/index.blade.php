@@ -96,6 +96,7 @@
                         { data: 'unp', defaultContent: '-' },
                         {
                             data: 'status',
+                            className: 'text-center',
                             render: function (data) {
                                 return data === 'active'
                                     ? '<i class="fas fa-check text-success"></i>'
@@ -104,18 +105,19 @@
                         },
                         {
                             data: 'invoice_email_required',
+                            className: 'text-center',
                             render: function (data) {
                                 return data == 1
                                     ? '<i class="fas fa-check text-success"></i>'
                                     : '<i class="fas fa-ban text-danger"></i>';
                             }
                         },
-                        { data: 'invoice_email_day', defaultContent: '-' },
+                        { data: 'invoice_email_day', defaultContent: '-', className: 'text-center' },
                         {
                             data: 'bonus_cards_count',
                             orderable: true,
                             searchable: false,
-                            className: 'sub-table-arr',
+                            className: 'sub-table-arr text-center',
                             defaultContent: '0',
                             render: function (data, type, row) {
                                 if (type === 'display' && data > 0) {
@@ -293,7 +295,8 @@
 
                 $('#deleteSelected').on('click', function () {
                     if (selectedIds.length === 0) return;
-                    if (confirm(`Вы уверены, что хотите удалить ${selectedIds.length} клиент(ов)?`)) {
+
+                    showConfirmModal(`Вы уверены, что хотите удалить выбранные записи: ${selectedIds.length} шт.?`, function () {
                         $.ajax({
                             url: "{{ route('carwash_clients.deleteSelected') }}",
                             method: 'POST',
@@ -302,17 +305,17 @@
                                 ids: selectedIds
                             },
                             success: function (response) {
-                                alert(response.success);
+                                showToast('Успех', response.success, 'success');
                                 selectedIds = [];
-                                allRecordsGloballySelected = false;
+                                allRecordsGloballySelected = false; // Added line
                                 $('#deleteSelected').prop('disabled', true);
                                 table.draw();
                             },
                             error: function () {
-                                alert('Ошибка при удалении клиентов.');
+                                showToast('Ошибка', 'Ошибка при удалении клиентов.', 'error');
                             }
                         });
-                    }
+                    });
                 });
 
                 // Обработчик клика для открытия подтаблицы
@@ -356,27 +359,8 @@
                                 columns: [
                                     { data: 'name', title: 'Название карты', defaultContent: '-' },
                                     { data: 'card_number', title: 'Номер карты', defaultContent: '-' },
-                                    { data: 'rate_per_minute', title: 'Цена за минуту, BYN', defaultContent: '-', className: 'text-end' },
-                                    { data: 'status', title: 'Статус', defaultContent: '-' },
-                                    /*                                    {
-                                                                            data: 'action',
-                                                                            title: 'Действия',
-                                                                            orderable: false,
-                                                                            searchable: false,
-                                                                            render: function (data, type, row) {
-                                                                                return `
-                                                                                <a href="/bonus_cards/${row.id}/edit" class="btn btn-sm btn-outline-warning" title="Редактировать">
-                                                                                    <i class="fas fa-edit"></i>
-                                                                                </a>
-                                                                                <form action="/bonus_cards/${row.id}" method="POST" style="display:inline;">
-@csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>`
-                                }
-                            }*/
+                                    { data: 'rate_per_minute', title: 'Цена за минуту, BYN', defaultContent: '-' },
+                                    { data: 'status', title: 'Статус', defaultContent: '-', className: 'text-center' },
                                 ],
                                 dom: 't',
                                 searching: false,
