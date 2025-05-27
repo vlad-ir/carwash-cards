@@ -121,7 +121,7 @@
                             defaultContent: '0',
                             render: function (data, type, row) {
                                 if (type === 'display' && data > 0) {
-                                    return data + ' <i class="fas fa-chevron-right toggle-details"></i>';
+                                    return '<button class="btn btn-sm btn-outline-primary" title="Показать/скрыть список карт">'+ data + ' <i class="fas toggle-details fa-chevron-right"></i></button>';
                                 }
                                 return data;
                             }
@@ -318,6 +318,7 @@
                     });
                 });
 
+
                 // Обработчик клика для открытия подтаблицы
                 $('#clientsTable tbody').on('click', 'td.sub-table-arr', function () {
                     const tr = $(this).closest('tr');
@@ -325,6 +326,7 @@
 
                     if (row.child.isShown()) {
                         // Закрываем уже открытую подтаблицу
+                        tr.find('.sub-table-arr .btn').removeClass('btn-primary').addClass('btn-outline-primary');
                         tr.find('i.toggle-details').removeClass('fa-chevron-down').addClass('fa-chevron-right');
                         row.child.hide();
                         openedRow = null;
@@ -332,6 +334,7 @@
                         // Если есть другая открытая строка — закрываем её
                         if (openedRow) {
                             const prevTr = $(openedRow.node());
+                            prevTr.find('.sub-table-arr .btn').removeClass('btn-primary').addClass('btn-outline-primary');
                             prevTr.find('i.toggle-details').removeClass('fa-chevron-down').addClass('fa-chevron-right');
                             openedRow.child.hide();
                         }
@@ -344,36 +347,63 @@
 
                         const detailContainerId = `clientBonusCardsTable_${clientId}`;
 
-                        row.child(`<div style="text-align:center; padding:10px;">
-                                      <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        // Показываем спинер
+                        row.child(`<div style="padding:10px;display: flex;justify-content: center;">
+                                      <i class="fas fa-spinner custom-spin fa-2x"></i>
                                       <span style="vertical-align:middle; margin-left:10px;">Загрузка данных...</span>
                                    </div>`).show();
 
-                        setTimeout(() => {
-                            row.child(`<table id="${detailContainerId}" class="table table-sm table-bordered" style="width:100%;"></table>`).show();
-
-                            $('#' + detailContainerId).DataTable({
-                                processing: true,
-                                serverSide: true,
-                                ajax: '{{ route('carwash_clients.bonus_cards_data', ':clientId') }}'.replace(':clientId', clientId),
-                                columns: [
-                                    { data: 'name', title: 'Название карты', defaultContent: '-' },
-                                    { data: 'card_number', title: 'Номер карты', defaultContent: '-' },
-                                    { data: 'rate_per_minute', title: 'Цена за минуту, BYN', defaultContent: '-' },
-                                    { data: 'status', title: 'Статус', defaultContent: '-', className: 'text-center' },
-                                ],
-                                dom: 't',
-                                searching: false,
-                                paging: false,
-                                info: false,
-                                ordering: false
-                            });
-                        }, 100);
-
+                        tr.find('.sub-table-arr .btn').removeClass('btn-outline-primary').addClass('btn-primary');
                         tr.find('i.toggle-details').removeClass('fa-chevron-right').addClass('fa-chevron-down');
                         openedRow = row;
+
+                        // URL для запроса
+                        const url = '{{ route('carwash_clients.bonus_cards_data', ':clientId') }}'.replace(':clientId', clientId);
+
+                        // Выполняем AJAX-запрос вручную
+                        $.ajax({
+                            url: url,
+                            method: 'GET',
+                            dataType: 'json',
+                            success: function (response) {
+                                // Удаляем спинер и вставляем таблицу
+                                const tableHtml = `
+                                <table id="${detailContainerId}" class="table table-sm table-bordered" style="width:100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>Название карты</th>
+                                            <th>Номер карты</th>
+                                            <th>Цена за минуту, BYN</th>
+                                            <th>Статус</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${response.data.map(card => `
+                                            <tr>
+                                                <td>${card.name || '-'}</td>
+                                                <td>${card.card_number || '-'}</td>
+                                                <td>${card.rate_per_minute || '-'}</td>
+                                                <td class="text-center">${card.status || '-'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            `;
+
+                                row.child(tableHtml).show();
+                            },
+                            error: function (xhr) {
+                                console.error("Ошибка при загрузке данных бонусных карт:", xhr);
+                                row.child(`
+                                    <div class="text-danger text-center" style="padding: 10px;">
+                                        Не удалось загрузить данные.
+                                    </div>
+                                `).show();
+                            }
+                        });
                     }
                 });
+                
             });
 
         </script>

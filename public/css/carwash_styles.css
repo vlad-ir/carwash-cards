@@ -54,20 +54,14 @@ td.bonus-cards-details {
     border-top: 1px solid #ddd; /* Линия сверху для отделения от родительской строки */
 }
 
-/* Улучшение для прелоадера, если он используется внутри td.bonus-cards-details */
-td.bonus-cards-details .fa-spinner {
-    font-size: 1.5em; /* Немного увеличим иконку спиннера */
-    margin-right: 8px;
-    vertical-align: middle;
-}
-
-td.bonus-cards-details div[style*="text-align:center"] {
-    padding: 15px; /* Увеличим отступы для прелоадера */
-}
 
 /* Стиль для ячеек управления в основной таблице, чтобы курсор был pointer */
 #clientsTable td.sub-table-arr {
     cursor: pointer;
+}
+
+.sub-table-arr .btn-sm {
+    padding: 0.1rem 0.6rem !important;
 }
 
 /* Если стрелка находится внутри dt-control, можно добавить ей небольшой отступ */
@@ -76,3 +70,11 @@ td.bonus-cards-details div[style*="text-align:center"] {
     transition: transform 0.2s ease-in-out; /* Плавный поворот стрелки */
 }
 
+.custom-spin {
+    animation: custom_spin 1s linear infinite;
+}
+
+@keyframes custom_spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
