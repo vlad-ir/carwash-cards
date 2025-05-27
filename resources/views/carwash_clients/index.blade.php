@@ -355,6 +355,7 @@
 
                         tr.find('.sub-table-arr .btn').removeClass('btn-outline-primary').addClass('btn-primary');
                         tr.find('i.toggle-details').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+
                         openedRow = row;
 
                         // URL для запроса
@@ -368,13 +369,13 @@
                             success: function (response) {
                                 // Удаляем спинер и вставляем таблицу
                                 const tableHtml = `
-                                <table id="${detailContainerId}" class="table table-sm table-bordered" style="width:100%;">
+                                <table id="${detailContainerId}" class="table table-sm table-bordered" style="width:100%; font-size: small;">
                                     <thead>
                                         <tr>
                                             <th>Название карты</th>
                                             <th>Номер карты</th>
                                             <th>Цена за минуту, BYN</th>
-                                            <th>Статус</th>
+                                            <th class="text-center">Статус</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -403,7 +404,7 @@
                         });
                     }
                 });
-                
+
             });
 
         </script>
