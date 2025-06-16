@@ -51,7 +51,7 @@ class CarwashInvoiceService
             $totalAmountWithoutVat = 0.0;
 
             foreach ($activeCardsCollection as $card) {
-                $statsForCard = CarwashBonusCardStat::where('bonus_card_id', $card->id)
+                $statsForCard = CarwashBonusCardStat::where('card_id', $card->id)
                     ->whereBetween('created_at', [$periodStart, $periodEnd])
                     ->get();
 

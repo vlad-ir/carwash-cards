@@ -71,7 +71,7 @@ class CarwashGenerateInvoicesCommand extends Command
         foreach ($clients as $client) {
             Log::info("CarwashGenerateInvoicesCommand: Checking client ID: {$client->id} ({$client->short_name}). Invoice email day: {$client->invoice_email_day}. Current day: {$currentDate->day}.");
 
-            if ((int)$client->invoice_email_day === (int)$currentDate->day) {
+            if ((int)$client->invoice_email_day <= (int)$currentDate->day) {
                 Log::info("CarwashGenerateInvoicesCommand: Matched invoice_email_day for client ID: {$client->id}.");
 
                 // Define the period for the invoice (previous month)
