@@ -159,9 +159,9 @@ class CarwashInvoiceService
         float $overallTotalAmountWithoutVat,
         ?float $overallVatAmount,
         float $overallTotalAmountWithVat,
-        int $totalCardsCountOverall,    // New parameter for header
-        int $activeCardsCountOverall,   // New parameter for header
-        int $blockedCardsCountOverall   // New parameter for header
+        int $totalCardsCountOverall,
+        int $activeCardsCountOverall,
+        int $blockedCardsCountOverall
     ): string {
         $templatePath = storage_path('app/public/invoice_template/invoice.xls');
 
@@ -181,58 +181,70 @@ class CarwashInvoiceService
             $sheet->setCellValue('A6', "Счет № 117 от 30 апреля 2025 г.");
             $sheet->setCellValue('A8', (string) $client->contract);
             $sheet->setCellValue('A9', "Заказчик: ".$client->full_name);
+            $sheet->setCellValue('C25', (string) $client->full_name);
             $sheet->setCellValue('A10', "Плательщик: {$client->full_name}, адрес: {$client->postal_address}");
             $sheet->setCellValue('B11', "Р/сч: {$client->bank_account_number} в {$client->bank_postal_address} код {$client->bank_bic}, УНП:{$client->unp}");
-/*            $sheet->setCellValue('B2', (string) $client->full_name);  // Placeholder
-            $sheet->setCellValue('B3', (string) $client->unp);        // Placeholder
-            $sheet->setCellValue('B4', (string) $client->postal_address); // Placeholder
-            $bankDetails = "Р/с: {$client->bank_account_number}, BIC: {$client->bank_bic}, Адрес банка: {$client->bank_postal_address}";
-            $sheet->setCellValue('B5', $bankDetails); // Placeholder
 
-            $invoiceNumberXls = "INV-{$client->id}-{$currentDate->format('YmdHis')}";
-            $sheet->setCellValue('F1', $invoiceNumberXls); // Placeholder
-            $sheet->setCellValue('F2', $currentDate->format('d.m.Y')); // Placeholder
-            $sheet->setCellValue('F3', "Период с {$parsedPeriodStart} по {$parsedPeriodEnd}"); // Placeholder
 
-            // Overall Card Counts in header
-            $sheet->setCellValue('D5', $totalCardsCountOverall);  // Placeholder: Total Cards
-            $sheet->setCellValue('D6', $activeCardsCountOverall);  // Placeholder: Active Cards
-            $sheet->setCellValue('D7', $blockedCardsCountOverall); // Placeholder: Blocked Cards*/
+            $sheet->setCellValue("C16", $overallTotalAmountWithoutVat);
+            $sheet->setCellValue("C17", $overallTotalAmountWithoutVat);
+            $sheet->setCellValue("E16", $overallVatAmount ?? 0);
+            $sheet->setCellValue("E17", $overallVatAmount ?? 0);
+            $sheet->setCellValue("F16", $overallTotalAmountWithVat);
+            $sheet->setCellValue("F17", $overallTotalAmountWithVat);
 
-            // --- Populate Card Details (Table) ---
-            $startRow = 16; // Placeholder: Starting row for card details table
+
+            // --- Прописью ---
+            $sheet->setCellValue('A19', "Сумма НДС: " . $this->convertToWords($overallVatAmount ?? 0));
+            $sheet->setCellValue('A21', "Всего к оплате на сумму с НДС: " . $this->convertToWords($overallTotalAmountWithVat));
+
+
+            // --- Детализация по картам ---
+            $startRow = 39; // Первая строка с данными
+            $rowNumber = 1;
             $currentRow = $startRow;
 
-            foreach ($cardStatsForDetails as $stat) { // $cardStatsForDetails only contains cards with usage
-                $bonusCard = $stat->bonusCard; // This is a CarwashBonusCard object
-                $durationSeconds = (int) $stat->duration_seconds;
+            // Период
+            $parsedPeriodStart = Carbon::parse($periodStart)->format('d.m.Y');
+            $parsedPeriodEnd = Carbon::parse($periodEnd)->format('d.m.Y');
+            $sheet->setCellValue('A36', "Период с {$parsedPeriodStart} по {$parsedPeriodEnd}");
 
-                $cardNumber = (string) $bonusCard->card_number;
-                $ratePerMinute = (float) $bonusCard->rate_per_minute;
+            foreach ($cardStatsForDetails as $stat) {
+                $bonusCard = $stat->bonusCard;
+                $durationSeconds = (int)$stat->duration_seconds;
+                $cardNumber = (string)$bonusCard->card_number;
+                $ratePerMinute = (float)$bonusCard->rate_per_minute;
 
-                $durationMinutes = 0;
-                if ($durationSeconds > 0) {
-                    $durationMinutes = (int) ceil($durationSeconds / 60.0);
-                    if ($durationMinutes == 0) { // Ensure at least 1 minute if any seconds > 0
-                        $durationMinutes = 1;
-                    }
+                $durationMinutes = max(1, ceil($durationSeconds / 60));
+                $amountForCard = $durationMinutes * $ratePerMinute;
+                $vatRate = 20.0;
+                $vatSum = round($amountForCard * ($vatRate / 100), 2);
+                $totalWithVat = $amountForCard + $vatSum;
+
+                // Вставка новой строки перед каждой записью
+                if ($currentRow > $startRow) {
+                    $sheet->insertNewRowBefore($currentRow, 1);
                 }
 
-                $amountForCard = $durationMinutes * $ratePerMinute;
+                // Заполнение данных
+                $sheet->setCellValue("A{$currentRow}", $rowNumber++);
+                $sheet->setCellValue("B{$currentRow}", $cardNumber);
+                $sheet->setCellValue("C{$currentRow}", $currentDate->toDateTimeString());
+                $sheet->setCellValue("D{$currentRow}", $durationSeconds);
+                $sheet->setCellValue("E{$currentRow}", 0);
+                $sheet->setCellValue("F{$currentRow}", $ratePerMinute);
+                $sheet->setCellValue("G{$currentRow}", $amountForCard);
+                $sheet->setCellValue("H{$currentRow}", $vatRate);
+                $sheet->setCellValue("I{$currentRow}", $vatSum);
+                $sheet->setCellValue("J{$currentRow}", $totalWithVat);
 
-                $sheet->setCellValue("B{$currentRow}", $cardNumber);        // Placeholder
-                $sheet->setCellValue("C{$currentRow}", $ratePerMinute);     // Placeholder
-                $sheet->setCellValue("D{$currentRow}", $durationMinutes);   // Placeholder
-                $sheet->setCellValue("E{$currentRow}", $amountForCard);     // Placeholder
                 $currentRow++;
             }
 
-            // --- Populate Totals ---
-            // These totals are the ones calculated in createAndSendInvoiceForClient and passed in.
-            $totalRowPlaceholder = $currentRow + 1; // Example: totals start one row after the last card item
-            $sheet->setCellValue("E{$totalRowPlaceholder}", $overallTotalAmountWithoutVat); // Placeholder
-            $sheet->setCellValue("E" . ($totalRowPlaceholder + 1), $overallVatAmount ?? 0); // Placeholder
-            $sheet->setCellValue("E" . ($totalRowPlaceholder + 2), $overallTotalAmountWithVat); // Placeholder
+            // --- Итоговая строка детализации ---
+            $sheet->setCellValue("G{$currentRow}", "=SUM(G{$startRow}:G" . ($currentRow - 1) . ")");
+            $sheet->setCellValue("I{$currentRow}", "=SUM(I{$startRow}:I" . ($currentRow - 1) . ")");
+            $sheet->setCellValue("J{$currentRow}", "=SUM(J{$startRow}:J" . ($currentRow - 1) . ")");
 
             // --- Save File ---
             $outputDir = storage_path('app/public/invoices');
@@ -254,5 +266,103 @@ class CarwashInvoiceService
             Log::error("Error in generateInvoiceXls for client {$client->id}: {$e->getMessage()}", ['exception' => $e]);
             throw $e;
         }
+    }
+
+
+    // Сумма прописью.
+    private function convertToWords($inn, $stripkop=false): array|string|null
+    {
+        $nol = 'ноль';
+        $str[100]= array('','сто','двести','триста','четыреста','пятьсот','шестьсот', 'семьсот', 'восемьсот','девятьсот');
+        $str[11] = array('','десять','одиннадцать','двенадцать','тринадцать', 'четырнадцать','пятнадцать','шестнадцать','семнадцать', 'восемнадцать','девятнадцать','двадцать');
+        $str[10] = array('','десять','двадцать','тридцать','сорок','пятьдесят', 'шестьдесят','семьдесят','восемьдесят','девяносто');
+        $sex = array(
+            array('','один','два','три','четыре','пять','шесть','семь', 'восемь','девять'),// m
+            array('','одна','две','три','четыре','пять','шесть','семь', 'восемь','девять') // f
+        );
+        $forms = array(
+            array('копейка', 'копейки', 'копеек', 1), // 10^-2
+            array('белорусский рубль', 'белорусских рубля', 'белорусских рублей',  0), // 10^ 0
+            array('тысяча', 'тысячи', 'тысяч', 1), // 10^ 3
+            array('миллион', 'миллиона', 'миллионов',  0), // 10^ 6
+            array('миллиард', 'миллиарда', 'миллиардов',  0), // 10^ 9
+            array('триллион', 'триллиона', 'триллионов',  0), // 10^12
+        );
+        $out = $tmp = array();
+        // Поехали!
+        $tmp = explode('.', str_replace(',','.', $inn));
+        $rub = number_format($tmp[ 0], 0,'','-');
+        if ($rub== 0) $out[] = $nol;
+        // нормализация копеек
+        $kop = isset($tmp[1]) ? substr(str_pad($tmp[1], 2, '0', STR_PAD_RIGHT), 0,2) : '00';
+        $segments = explode('-', $rub);
+        $offset = sizeof($segments);
+        if ((int)$rub== 0) { // если 0 рублей
+            $o[] = $nol;
+            $o[] = $this->morph( 0, $forms[1][ 0],$forms[1][1],$forms[1][2]);
+        }
+        else {
+            foreach ($segments as $k=>$lev) {
+                $sexi= (int) $forms[$offset][3]; // определяем род
+                $ri = (int) $lev; // текущий сегмент
+                if ($ri== 0 && $offset>1) {// если сегмент==0 & не последний уровень(там Units)
+                    $offset--;
+                    continue;
+                }
+                // нормализация
+                $ri = str_pad($ri, 3, '0', STR_PAD_LEFT);
+                // получаем циферки для анализа
+                $r1 = (int)substr($ri, 0,1); //первая цифра
+                $r2 = (int)substr($ri,1,1); //вторая
+                $r3 = (int)substr($ri,2,1); //третья
+                $r22= (int)$r2.$r3; //вторая и третья
+                // разгребаем порядки
+                if ($ri>99) $o[] = $str[100][$r1]; // Сотни
+                if ($r22>20) {// >20
+                    $o[] = $str[10][$r2];
+                    $o[] = $sex[ $sexi ][$r3];
+                }
+                else { // <=20
+                    if ($r22>9) $o[] = $str[11][$r22-9]; // 10-20
+                    elseif($r22> 0) $o[] = $sex[ $sexi ][$r3]; // 1-9
+                }
+                // Рубли
+                $o[] = $this->morph($ri, $forms[$offset][ 0],$forms[$offset][1],$forms[$offset][2]);
+                $offset--;
+            }
+        }
+        // Копейки
+        if (!$stripkop) {
+            $o[] = $kop;
+            $o[] = $this->morph($kop,$forms[ 0][ 0],$forms[ 0][1],$forms[ 0][2]);
+        }
+
+        // Формируем строку
+        $result = preg_replace("/\s{2,}/", ' ', implode(' ', $o));
+
+        // Делаем первую букву заглавной
+        $result = mb_strtoupper(mb_substr($result, 0, 1)) . mb_substr($result, 1);
+
+        // Если есть копейки, заменяем пробел перед ними на запятую
+        if (!$stripkop && strpos($result, ' копеек')) {
+            $parts = preg_split('/\s(?=\d{2}\sкопеек)/u', $result, 2);
+            if (count($parts) === 2) {
+                $result = $parts[0] . ', ' . $parts[1];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Склоняем словоформу
+     */
+    private function morph($n, $f1, $f2, $f5) {
+        $n = abs($n) % 100;
+        $n1= $n % 10;
+        if ($n>10 && $n<20) return $f5;
+        if ($n1>1 && $n1<5) return $f2;
+        if ($n1==1) return $f1;
+        return $f5;
     }
 }
