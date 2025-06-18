@@ -195,74 +195,6 @@ class CarwashInvoiceService
             $parsedPeriodEnd = Carbon::parse($periodEnd)->format('d.m.Y');
             $sheet->setCellValue('A36', "Период с {$parsedPeriodStart} по {$parsedPeriodEnd}");
 
-
-/*
-            // --- Дополнительная детализация всех записей использования карт клиента ---
-            $sheet->setCellValue("A{$currentRow}", "Детализация по всем картам клиента (только активные и заблокированные):");
-            $sheet->getStyle("A{$currentRow}")->getFont()->setBold(true);
-            $currentRow++;
-
-            $totalSeconds = 0;
-            $totalCost = 0;
-            $globalCounter = 1;
-
-            foreach ($client->cards as $card) {
-                if (!in_array($card->status, ['active'])) {
-                    continue; // пропускаем карты с другими статусами
-                }
-
-                $cardStats = \DB::table('carwash_bonus_card_stats')
-                    ->where('card_id', $card->id)
-                    ->whereBetween('start_time', [$periodStart, $periodEnd])
-                    ->orderBy('start_time')
-                    ->get();
-
-                if ($cardStats->isEmpty()) continue;
-
-                // Название карты и статус
-                $sheet->setCellValue("A{$currentRow}", "Карта #{$card->id} ({$card->name}), статус: {$card->status}");
-                $sheet->getStyle("A{$currentRow}")->getFont()->setBold(true);
-                $currentRow++;
-
-                // Заголовки таблицы
-                $sheet->setCellValue("A{$currentRow}", "№");
-                $sheet->setCellValue("B{$currentRow}", "Дата/время");
-                $sheet->setCellValue("C{$currentRow}", "Длительность (сек.)");
-                $sheet->setCellValue("D{$currentRow}", "Стоимость");
-                $sheet->getStyle("A{$currentRow}:D{$currentRow}")->getFont()->setBold(true);
-                $currentRow++;
-
-                foreach ($cardStats as $stat) {
-                    $cost = 0;
-                    if ($card->rate_per_minute) {
-                        $cost = ($stat->duration_seconds / 60) * $card->rate_per_minute;
-                    }
-
-                    $sheet->setCellValue("A{$currentRow}", $globalCounter++);
-                    $sheet->setCellValue("B{$currentRow}", \Carbon\Carbon::parse($stat->start_time)->format('d.m.Y H:i'));
-                    $sheet->setCellValue("C{$currentRow}", $stat->duration_seconds);
-                    $sheet->setCellValue("D{$currentRow}", round($cost, 2));
-
-                    $totalSeconds += $stat->duration_seconds;
-                    $totalCost += $cost;
-
-                    $currentRow++;
-                }
-
-                $currentRow++; // Пустая строка между картами
-            }
-
-            // --- Итог по всем картам ---
-            $sheet->setCellValue("A{$currentRow}", "ИТОГО по всем картам:");
-            $sheet->setCellValue("C{$currentRow}", $totalSeconds);
-            $sheet->setCellValue("D{$currentRow}", round($totalCost, 2));
-            $sheet->getStyle("A{$currentRow}:D{$currentRow}")->getFont()->setBold(true);
-
-*/
-
-
-
-
             foreach ($cardStatsForDetails as $stat) {
                 $bonusCard = $stat->bonusCard;
                 $durationSeconds = (int)$stat->duration_seconds;
@@ -299,10 +231,6 @@ class CarwashInvoiceService
             $sheet->setCellValue("G{$currentRow}", "=SUM(G{$startRow}:G" . ($currentRow - 1) . ")");
             $sheet->setCellValue("I{$currentRow}", "=SUM(I{$startRow}:I" . ($currentRow - 1) . ")");
             $sheet->setCellValue("J{$currentRow}", "=SUM(J{$startRow}:J" . ($currentRow - 1) . ")");
-
-
-
-
 
             // --- Save File ---
             $outputDir = storage_path('app/public/invoices');
