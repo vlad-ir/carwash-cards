@@ -178,8 +178,12 @@ class CarwashInvoiceService
             $parsedPeriodEnd = Carbon::parse($periodEnd)->format('d.m.Y');
 
             // --- Populate Client and Invoice Data (Header) ---
-            $sheet->setCellValue('B1', (string) $client->short_name); // Placeholder
-            $sheet->setCellValue('B2', (string) $client->full_name);  // Placeholder
+            $sheet->setCellValue('A6', "Счет № 117 от 30 апреля 2025 г.");
+            $sheet->setCellValue('A8', (string) $client->contract);
+            $sheet->setCellValue('A9', "Заказчик: ".$client->full_name);
+            $sheet->setCellValue('A10', "Плательщик: {$client->full_name}, адрес: {$client->postal_address}");
+            $sheet->setCellValue('B11', "Р/сч: {$client->bank_account_number} в {$client->bank_postal_address} код {$client->bank_bic}, УНП:{$client->unp}");
+/*            $sheet->setCellValue('B2', (string) $client->full_name);  // Placeholder
             $sheet->setCellValue('B3', (string) $client->unp);        // Placeholder
             $sheet->setCellValue('B4', (string) $client->postal_address); // Placeholder
             $bankDetails = "Р/с: {$client->bank_account_number}, BIC: {$client->bank_bic}, Адрес банка: {$client->bank_postal_address}";
@@ -193,10 +197,10 @@ class CarwashInvoiceService
             // Overall Card Counts in header
             $sheet->setCellValue('D5', $totalCardsCountOverall);  // Placeholder: Total Cards
             $sheet->setCellValue('D6', $activeCardsCountOverall);  // Placeholder: Active Cards
-            $sheet->setCellValue('D7', $blockedCardsCountOverall); // Placeholder: Blocked Cards
+            $sheet->setCellValue('D7', $blockedCardsCountOverall); // Placeholder: Blocked Cards*/
 
             // --- Populate Card Details (Table) ---
-            $startRow = 10; // Placeholder: Starting row for card details table
+            $startRow = 16; // Placeholder: Starting row for card details table
             $currentRow = $startRow;
 
             foreach ($cardStatsForDetails as $stat) { // $cardStatsForDetails only contains cards with usage
@@ -216,10 +220,10 @@ class CarwashInvoiceService
 
                 $amountForCard = $durationMinutes * $ratePerMinute;
 
-                $sheet->setCellValue("A{$currentRow}", $cardNumber);        // Placeholder
-                $sheet->setCellValue("B{$currentRow}", $ratePerMinute);     // Placeholder
-                $sheet->setCellValue("C{$currentRow}", $durationMinutes);   // Placeholder
-                $sheet->setCellValue("D{$currentRow}", $amountForCard);     // Placeholder
+                $sheet->setCellValue("B{$currentRow}", $cardNumber);        // Placeholder
+                $sheet->setCellValue("C{$currentRow}", $ratePerMinute);     // Placeholder
+                $sheet->setCellValue("D{$currentRow}", $durationMinutes);   // Placeholder
+                $sheet->setCellValue("E{$currentRow}", $amountForCard);     // Placeholder
                 $currentRow++;
             }
 
