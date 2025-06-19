@@ -97,7 +97,7 @@ class CarwashInvoiceService
 
         foreach ($activeCards as $card) {
             $usage = CarwashBonusCardStat::where('card_id', $card->id)
-                ->whereBetween('created_at', [$start, $end])
+                ->whereBetween('start_time', [$start, $end])
                 ->get();
 
             $seconds = $usage->sum('duration_seconds');
@@ -162,11 +162,9 @@ class CarwashInvoiceService
             $spreadsheet = IOFactory::load($templatePath);
             $sheet = $spreadsheet->getActiveSheet();
             $currentDate = Carbon::now();
-            $parsedPeriodStart = Carbon::parse($periodStart)->format('d.m.Y');
-            $parsedPeriodEnd = Carbon::parse($periodEnd)->format('d.m.Y');
 
             // --- Populate Client and Invoice Data (Header) ---
-            $sheet->setCellValue('A6', "Счет № 117 от 30 апреля 2025 г.");
+            $sheet->setCellValue('A6', "Счет № ___ от {$currentDate->format('d.m.Y')} г.");
             $sheet->setCellValue('A8', (string) $client->contract);
             $sheet->setCellValue('A9', "Заказчик: ".$client->full_name);
             $sheet->setCellValue('C25', (string) $client->full_name);
@@ -196,15 +194,11 @@ class CarwashInvoiceService
             $parsedPeriodEnd = Carbon::parse($periodEnd)->format('d.m.Y');
             $sheet->setCellValue('A36', "Период с {$parsedPeriodStart} по {$parsedPeriodEnd}");
 
-
-            $totalSeconds = 0;
-            $totalCost = 0;
             $globalCounter = 1;
 
             foreach ($client->bonusCards->where('status', 'active') as $card) {
 
-                $cardStats = \DB::table('carwash_bonus_card_stats')
-                    ->where('card_id', $card->id)
+                $cardStats = CarwashBonusCardStat::where('card_id', $card->id)
                     ->whereBetween('start_time', [$periodStart, $periodEnd])
                     ->orderBy('start_time')
                     ->get();
@@ -212,12 +206,16 @@ class CarwashInvoiceService
                 if ($cardStats->isEmpty()) continue;
 
                 // Название карты и статус
-                $sheet->setCellValue("B{$currentRow}", "Карта {$card->card_number} ({$card->name}), статус: {$card->status}");
+                $sheet->setCellValue("B{$currentRow}", $card->card_number);
                 $sheet->getStyle("B{$currentRow}")->getFont()->setBold(true);
+                $sheet->getStyle("A{$currentRow}:J{$currentRow}")->getBorders()
+                    ->getAllBorders()
+                    ->setBorderStyle(Border::BORDER_THIN);
                 $currentRow++;
 
                 foreach ($cardStats as $stat) {
                     $durationSeconds = (int)$stat->duration_seconds;
+                    $remainingBalanceSeconds = (int)$stat->remaining_balance_seconds;
                     $ratePerMinute = (float)$card->rate_per_minute;
 
                     $durationMinutes = max(1, ceil($durationSeconds / 60));
@@ -228,9 +226,9 @@ class CarwashInvoiceService
 
                     $sheet->setCellValue("A{$currentRow}", $globalCounter++);
                     $sheet->setCellValue("C{$currentRow}", \Carbon\Carbon::parse($stat->start_time)->format('d.m.Y H:i'));
-                    $sheet->setCellValue("D{$currentRow}", $stat->duration_seconds);
-                    $sheet->setCellValue("E{$currentRow}", 0);
-                    $sheet->setCellValue("F{$currentRow}", (float)$card->rate_per_minute);
+                    $sheet->setCellValue("D{$currentRow}", $durationSeconds);
+                    $sheet->setCellValue("E{$currentRow}", $remainingBalanceSeconds);
+                    $sheet->setCellValue("F{$currentRow}", $ratePerMinute);
                     $sheet->setCellValue("G{$currentRow}", $amountForCard);
                     $sheet->setCellValue("H{$currentRow}", $vatRate);
                     $sheet->getStyle("H{$currentRow}")
@@ -245,10 +243,8 @@ class CarwashInvoiceService
                     $currentRow++;
                 }
 
-                $currentRow++; // Пустая строка между картами
             }
 
-            $currentRow--;
             // --- Итог по всем картам ---
             $sheet->setCellValue("C{$currentRow}", "ИТОГО:");
             $sheet->setCellValue("D{$currentRow}", "=SUM(D{$startRow}:D" . ($currentRow - 1) . ")");
