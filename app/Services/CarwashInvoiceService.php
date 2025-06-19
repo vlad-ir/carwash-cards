@@ -261,7 +261,7 @@ class CarwashInvoiceService
                 ->getAllBorders()
                 ->setBorderStyle(Border::BORDER_THIN);
 
-            $sheet->getStyle("D{$currentRow}")
+            $sheet->getStyle("D{$currentRow}:E{$currentRow}")
                 ->getNumberFormat()
                 ->setFormatCode("# ##0");
 
