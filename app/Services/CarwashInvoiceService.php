@@ -39,13 +39,38 @@ class CarwashInvoiceService
             [$total, $active, $blocked] = $this->getCardCounts($client);
             [$cardStats, $amountWithoutVat] = $this->gatherUsageStats($client, $periodStart, $periodEnd);
 
+            // Получаем следующий номер счёта
+            $nextInvoiceNumber = CarwashInvoice::max('id') + 1;
+
+            // Проверяем: если нет использования — НЕ формируем файл, но СОХРАНЯЕМ инвойс с amount = 0
+            if (empty($cardStats) || $amountWithoutVat <= 0) {
+                $vatConfig = $this->calculateVat(0); // Рассчитываем НДС для 0
+
+                // Сохраняем "нулевой" счет в БД
+                CarwashInvoice::create([
+                    'client_id' => $client->id,
+                    'amount' => $vatConfig['amountWithVat'],
+                    'period_start' => $periodStart->toDateString(),
+                    'period_end' => $periodEnd->toDateString(),
+                    'total_cards_count' => $total,
+                    'active_cards_count' => $active,
+                    'blocked_cards_count' => $blocked,
+                    'file_path' => null,
+                    'sent_at' => now(),
+                ]);
+
+                Log::info("Client ID {$client->id} has no usage or zero amount. Invoice with zero amount saved to database.");
+                DB::commit();
+                return true;
+            }
+
             $vatConfig = $this->calculateVat($amountWithoutVat);
 
             $xlsPath = $this->generateInvoiceXls(
                 $client, $periodStart->toDateString(), $periodEnd->toDateString(),
                 $cardStats, $amountWithoutVat,
-                $vatConfig['vatAmount'], $vatConfig['amountWithVat'],
-                $total, $active, $blocked
+                $vatConfig['vatAmount'], $vatConfig['amountWithVat'], $vatConfig['vatRate'],
+                $nextInvoiceNumber
             );
 
             $invoice = CarwashInvoice::create([
@@ -118,7 +143,8 @@ class CarwashInvoiceService
         $vat = $calcVat ? $amount * $vatPercent : 0.0;
         return [
             'vatAmount' => $vat,
-            'amountWithVat' => $amount + $vat
+            'amountWithVat' => $amount + $vat,
+            'vatRate' => round($vatPercent * 100),
         ];
     }
 
@@ -133,9 +159,8 @@ class CarwashInvoiceService
      * @param float $overallTotalAmountWithoutVat
      * @param ?float $overallVatAmount
      * @param float $overallTotalAmountWithVat
-     * @param int $totalCardsCountOverall
-     * @param int $activeCardsCountOverall
-     * @param int $blockedCardsCountOverall
+     * @param int $overallVatRate
+     * @param int $nextInvoiceNumber
      * @return string The path to the saved XLS file.
      * @throws Exception
      */
@@ -147,9 +172,8 @@ class CarwashInvoiceService
         float $overallTotalAmountWithoutVat,
         ?float $overallVatAmount,
         float $overallTotalAmountWithVat,
-        int $totalCardsCountOverall,
-        int $activeCardsCountOverall,
-        int $blockedCardsCountOverall
+        int $overallVatRate,
+        int $nextInvoiceNumber
     ): string {
         $templatePath = storage_path('app/public/invoice_template/invoice.xls');
 
@@ -164,7 +188,7 @@ class CarwashInvoiceService
             $currentDate = Carbon::now();
 
             // --- Populate Client and Invoice Data (Header) ---
-            $sheet->setCellValue('A6', "Счет № ___ от {$currentDate->format('d.m.Y')} г.");
+            $sheet->setCellValue('A6', "Счет № AM-{$nextInvoiceNumber} от {$currentDate->format('d.m.Y')} г.");
             $sheet->setCellValue('A8', (string) $client->contract);
             $sheet->setCellValue('A9', "Заказчик: ".$client->full_name);
             $sheet->setCellValue('C25', (string) $client->full_name);
@@ -173,6 +197,7 @@ class CarwashInvoiceService
 
 
             $sheet->setCellValue("C16", $overallTotalAmountWithoutVat);
+            $sheet->setCellValue("D16", $overallVatRate);
             $sheet->setCellValue("C17", $overallTotalAmountWithoutVat);
             $sheet->setCellValue("E16", $overallVatAmount ?? 0);
             $sheet->setCellValue("E17", $overallVatAmount ?? 0);
@@ -220,8 +245,10 @@ class CarwashInvoiceService
 
                     $durationMinutes = max(1, ceil($durationSeconds / 60));
                     $amountForCard = $durationMinutes * $ratePerMinute;
-                    $vatRate = 20;
-                    $vatSum = round($amountForCard * ($vatRate / 100), 2);
+
+                    $vatData = $this->calculateVat($amountForCard);
+                    $vatRate = $vatData['vatRate'];
+                    $vatSum = $vatData['vatAmount'];
                     $totalWithVat = $amountForCard + $vatSum;
 
                     $sheet->setCellValue("A{$currentRow}", $globalCounter++);
