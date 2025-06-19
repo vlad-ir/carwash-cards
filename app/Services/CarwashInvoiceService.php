@@ -8,6 +8,8 @@ use App\Models\CarwashBonusCardStat;
 use App\Models\CarwashInvoice;
 use App\Mail\CarwashInvoiceMail;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use Exception;
 use Carbon\Carbon;
@@ -187,7 +189,6 @@ class CarwashInvoiceService
 
             // --- Детализация по картам ---
             $startRow = 39; // Первая строка с данными
-            $rowNumber = 1;
             $currentRow = $startRow;
 
             // Период
@@ -196,20 +197,11 @@ class CarwashInvoiceService
             $sheet->setCellValue('A36', "Период с {$parsedPeriodStart} по {$parsedPeriodEnd}");
 
 
-/*
-            // --- Дополнительная детализация всех записей использования карт клиента ---
-            $sheet->setCellValue("A{$currentRow}", "Детализация по всем картам клиента (только активные и заблокированные):");
-            $sheet->getStyle("A{$currentRow}")->getFont()->setBold(true);
-            $currentRow++;
-
             $totalSeconds = 0;
             $totalCost = 0;
             $globalCounter = 1;
 
-            foreach ($client->cards as $card) {
-                if (!in_array($card->status, ['active'])) {
-                    continue; // пропускаем карты с другими статусами
-                }
+            foreach ($client->bonusCards->where('status', 'active') as $card) {
 
                 $cardStats = \DB::table('carwash_bonus_card_stats')
                     ->where('card_id', $card->id)
@@ -220,31 +212,35 @@ class CarwashInvoiceService
                 if ($cardStats->isEmpty()) continue;
 
                 // Название карты и статус
-                $sheet->setCellValue("A{$currentRow}", "Карта #{$card->id} ({$card->name}), статус: {$card->status}");
-                $sheet->getStyle("A{$currentRow}")->getFont()->setBold(true);
-                $currentRow++;
-
-                // Заголовки таблицы
-                $sheet->setCellValue("A{$currentRow}", "№");
-                $sheet->setCellValue("B{$currentRow}", "Дата/время");
-                $sheet->setCellValue("C{$currentRow}", "Длительность (сек.)");
-                $sheet->setCellValue("D{$currentRow}", "Стоимость");
-                $sheet->getStyle("A{$currentRow}:D{$currentRow}")->getFont()->setBold(true);
+                $sheet->setCellValue("B{$currentRow}", "Карта {$card->card_number} ({$card->name}), статус: {$card->status}");
+                $sheet->getStyle("B{$currentRow}")->getFont()->setBold(true);
                 $currentRow++;
 
                 foreach ($cardStats as $stat) {
-                    $cost = 0;
-                    if ($card->rate_per_minute) {
-                        $cost = ($stat->duration_seconds / 60) * $card->rate_per_minute;
-                    }
+                    $durationSeconds = (int)$stat->duration_seconds;
+                    $ratePerMinute = (float)$card->rate_per_minute;
+
+                    $durationMinutes = max(1, ceil($durationSeconds / 60));
+                    $amountForCard = $durationMinutes * $ratePerMinute;
+                    $vatRate = 20;
+                    $vatSum = round($amountForCard * ($vatRate / 100), 2);
+                    $totalWithVat = $amountForCard + $vatSum;
 
                     $sheet->setCellValue("A{$currentRow}", $globalCounter++);
-                    $sheet->setCellValue("B{$currentRow}", \Carbon\Carbon::parse($stat->start_time)->format('d.m.Y H:i'));
-                    $sheet->setCellValue("C{$currentRow}", $stat->duration_seconds);
-                    $sheet->setCellValue("D{$currentRow}", round($cost, 2));
-
-                    $totalSeconds += $stat->duration_seconds;
-                    $totalCost += $cost;
+                    $sheet->setCellValue("C{$currentRow}", \Carbon\Carbon::parse($stat->start_time)->format('d.m.Y H:i'));
+                    $sheet->setCellValue("D{$currentRow}", $stat->duration_seconds);
+                    $sheet->setCellValue("E{$currentRow}", 0);
+                    $sheet->setCellValue("F{$currentRow}", (float)$card->rate_per_minute);
+                    $sheet->setCellValue("G{$currentRow}", $amountForCard);
+                    $sheet->setCellValue("H{$currentRow}", $vatRate);
+                    $sheet->getStyle("H{$currentRow}")
+                        ->getNumberFormat()
+                        ->setFormatCode('0"%"');
+                    $sheet->setCellValue("I{$currentRow}", $vatSum);
+                    $sheet->setCellValue("J{$currentRow}", $totalWithVat);
+                    $sheet->getStyle("A{$currentRow}:J{$currentRow}")->getBorders()
+                        ->getAllBorders()
+                        ->setBorderStyle(Border::BORDER_THIN);
 
                     $currentRow++;
                 }
@@ -252,55 +248,31 @@ class CarwashInvoiceService
                 $currentRow++; // Пустая строка между картами
             }
 
+            $currentRow--;
             // --- Итог по всем картам ---
-            $sheet->setCellValue("A{$currentRow}", "ИТОГО по всем картам:");
-            $sheet->setCellValue("C{$currentRow}", $totalSeconds);
-            $sheet->setCellValue("D{$currentRow}", round($totalCost, 2));
-            $sheet->getStyle("A{$currentRow}:D{$currentRow}")->getFont()->setBold(true);
-
-*/
-
-
-
-
-            foreach ($cardStatsForDetails as $stat) {
-                $bonusCard = $stat->bonusCard;
-                $durationSeconds = (int)$stat->duration_seconds;
-                $cardNumber = (string)$bonusCard->card_number;
-                $ratePerMinute = (float)$bonusCard->rate_per_minute;
-
-                $durationMinutes = max(1, ceil($durationSeconds / 60));
-                $amountForCard = $durationMinutes * $ratePerMinute;
-                $vatRate = 20.0;
-                $vatSum = round($amountForCard * ($vatRate / 100), 2);
-                $totalWithVat = $amountForCard + $vatSum;
-
-                // Вставка новой строки перед каждой записью
-                if ($currentRow > $startRow) {
-                    $sheet->insertNewRowBefore($currentRow, 1);
-                }
-
-                // Заполнение данных
-                $sheet->setCellValue("A{$currentRow}", $rowNumber++);
-                $sheet->setCellValue("B{$currentRow}", $cardNumber);
-                $sheet->setCellValue("C{$currentRow}", $currentDate->toDateTimeString());
-                $sheet->setCellValue("D{$currentRow}", $durationSeconds);
-                $sheet->setCellValue("E{$currentRow}", 0);
-                $sheet->setCellValue("F{$currentRow}", $ratePerMinute);
-                $sheet->setCellValue("G{$currentRow}", $amountForCard);
-                $sheet->setCellValue("H{$currentRow}", $vatRate);
-                $sheet->setCellValue("I{$currentRow}", $vatSum);
-                $sheet->setCellValue("J{$currentRow}", $totalWithVat);
-
-                $currentRow++;
-            }
-
-            // --- Итоговая строка детализации ---
+            $sheet->setCellValue("C{$currentRow}", "ИТОГО:");
+            $sheet->setCellValue("D{$currentRow}", "=SUM(D{$startRow}:D" . ($currentRow - 1) . ")");
+            $sheet->setCellValue("E{$currentRow}", "=SUM(E{$startRow}:E" . ($currentRow - 1) . ")");
             $sheet->setCellValue("G{$currentRow}", "=SUM(G{$startRow}:G" . ($currentRow - 1) . ")");
             $sheet->setCellValue("I{$currentRow}", "=SUM(I{$startRow}:I" . ($currentRow - 1) . ")");
             $sheet->setCellValue("J{$currentRow}", "=SUM(J{$startRow}:J" . ($currentRow - 1) . ")");
+            $sheet->getStyle("A{$currentRow}:J{$currentRow}")->getFont()->setBold(true);
+            $sheet->getStyle("D{$currentRow}:J{$currentRow}")->getBorders()
+                ->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+
+            $sheet->getStyle("D{$currentRow}")
+                ->getNumberFormat()
+                ->setFormatCode("# ##0");
+
+            $sheet->getStyle("F{$currentRow}:G{$currentRow}")
+                ->getNumberFormat()
+                ->setFormatCode("# ##0.00");
 
 
+            $sheet->getStyle("I{$currentRow}:J{$currentRow}")
+                ->getNumberFormat()
+                ->setFormatCode("# ##0.00");
 
 
 
