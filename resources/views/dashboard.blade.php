@@ -53,48 +53,49 @@
 
         <!-- Виджеты -->
         <div class="row">
-            <!-- Количество бонусных карт -->
-            <div class="col-md-6">
+            <!-- Статистика по клиентам -->
+            <div class="col-md-4">
                 <div class="card mb-4">
-                    <div class="card-header">Бонусные карты по месяцам</div>
+                    <div class="card-header">Клиенты</div>
                     <div class="card-body">
-                        <canvas id="bonusCardsChart"></canvas>
+                        <p>Общее количество: {{ $clientStats->total ?? 0 }}</p>
+                        <p>Активных: {{ $clientStats->active ?? 0 }}</p>
+                        <p>Заблокированных: {{ $clientStats->blocked ?? 0 }}</p>
+                        <p>Без бонусных карт: {{ $clientStats->without_card ?? 0 }}</p>
                     </div>
                 </div>
             </div>
-            <!-- Количество клиентов -->
-            <div class="col-md-6">
+            <!-- Статистика по бонусным картам -->
+            <div class="col-md-4">
                 <div class="card mb-4">
-                    <div class="card-header">Клиенты по месяцам</div>
+                    <div class="card-header">Бонусные карты</div>
                     <div class="card-body">
-                        <canvas id="clientsChart"></canvas>
+                        <p>Общее количество: {{ $bonusCardStats->total ?? 0 }}</p>
+                        <p>Активных: {{ $bonusCardStats->active ?? 0 }}</p>
+                        <p>Заблокированных: {{ $bonusCardStats->blocked ?? 0 }}</p>
                     </div>
                 </div>
             </div>
-            <!-- Количество счетов -->
-            <div class="col-md-6">
+            <!-- Статистика по счетам -->
+            <div class="col-md-4">
                 <div class="card mb-4">
-                    <div class="card-header">Счета по месяцам</div>
+                    <div class="card-header">Счета</div>
                     <div class="card-body">
-                        <canvas id="invoicesChart"></canvas>
+                        <p>Количество счетов: {{ $invoiceStats->total_count ?? 0 }}</p>
+                        <p>Общая сумма: {{ number_format($invoiceStats->total_amount ?? 0, 2) }} руб.</p>
+                        <p>Общая длительность использования: {{ (int) ceil(($invoiceStats->total_usage_duration_seconds ?? 0) / 60) }} мин.</p>
                     </div>
                 </div>
             </div>
-            <!-- Общая сумма счетов -->
-            <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header">Общая сумма счетов</div>
-                    <div class="card-body">
-                        <h3>{{ number_format($totalInvoicesAmount, 2) }} руб.</h3>
-                    </div>
-                </div>
-            </div>
-            <!-- Длительность использования карт -->
+        </div>
+
+        <!-- График "Длительность использования карт и суммы счетов по месяцам" -->
+        <div class="row">
             <div class="col-md-12">
                 <div class="card mb-4">
-                    <div class="card-header">Длительность использования карт по месяцам</div>
+                    <div class="card-header">Длительность использования карт и суммы счетов по месяцам</div>
                     <div class="card-body">
-                        <canvas id="usageDurationChart"></canvas>
+                        <canvas id="usageDurationAndInvoicesChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -104,110 +105,27 @@
     @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
-            // Бонусные карты
-            const bonusCardsCtx = document.getElementById('bonusCardsChart').getContext('2d');
-            new Chart(bonusCardsCtx, {
-                type: 'line',
-                data: {
-                    labels: @json($bonusCardsData['labels']),
-                    datasets: [
-                        {
-                            label: 'Всего',
-                            data: @json($bonusCardsData['data']['total']),
-                            borderColor: 'blue',
-                            fill: false
-                        },
-                        {
-                            label: 'Активные',
-                            data: @json($bonusCardsData['data']['active']),
-                            borderColor: 'green',
-                            fill: false
-                        },
-                        {
-                            label: 'Заблокированные',
-                            data: @json($bonusCardsData['data']['blocked']),
-                            borderColor: 'red',
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-
-            // Клиенты
-            const clientsCtx = document.getElementById('clientsChart').getContext('2d');
-            new Chart(clientsCtx, {
-                type: 'line',
-                data: {
-                    labels: @json($clientsData['labels']),
-                    datasets: [
-                        {
-                            label: 'Всего',
-                            data: @json($clientsData['data']['total']),
-                            borderColor: 'blue',
-                            fill: false
-                        },
-                        {
-                            label: 'Активные',
-                            data: @json($clientsData['data']['active']),
-                            borderColor: 'green',
-                            fill: false
-                        },
-                        {
-                            label: 'Заблокированные',
-                            data: @json($clientsData['data']['blocked']),
-                            borderColor: 'red',
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-
-            // Счета
-            const invoicesCtx = document.getElementById('invoicesChart').getContext('2d');
-            new Chart(invoicesCtx, {
-                type: 'line',
-                data: {
-                    labels: @json($invoicesData['labels']),
-                    datasets: [
-                        {
-                            label: 'Счета',
-                            data: @json($invoicesData['data']['total']),
-                            borderColor: 'purple',
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-
-            // Длительность использования
-            const usageDurationCtx = document.getElementById('usageDurationChart').getContext('2d');
-            new Chart(usageDurationCtx, {
+            // Длительность использования и суммы счетов
+            const usageDurationAndInvoicesCtx = document.getElementById('usageDurationAndInvoicesChart').getContext('2d');
+            new Chart(usageDurationAndInvoicesCtx, {
                 type: 'line',
                 data: {
                     labels: @json($usageDurationData['labels']),
                     datasets: [
                         {
-                            label: 'Длительность (сек)',
-                            data: @json($usageDurationData['data']['total_duration']),
+                            label: 'Длительность (мин)',
+                            data: @json($usageDurationData['data']),
                             borderColor: 'orange',
+                            backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                            yAxisID: 'y-duration',
+                            fill: false
+                        },
+                        {
+                            label: 'Сумма счетов (руб)',
+                            data: @json($invoicesAmountByMonthData['data']),
+                            borderColor: 'blue',
+                            backgroundColor: 'rgba(0, 0, 255, 0.2)',
+                            yAxisID: 'y-amount',
                             fill: false
                         }
                     ]
@@ -215,7 +133,29 @@
                 options: {
                     responsive: true,
                     scales: {
-                        y: { beginAtZero: true }
+                        'y-duration': {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Длительность (мин)'
+                            }
+                        },
+                        'y-amount': {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Сумма (руб)'
+                            },
+                            grid: {
+                                drawOnChartArea: false, // only want the grid lines for one axis to show up
+                            },
+                        }
                     }
                 }
             });

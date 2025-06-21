@@ -33,19 +33,22 @@ class CarwashDashboardController extends Controller
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
 
-        // Данные для графиков
-        $bonusCardsData = $this->getBonusCardsData($start, $end, $granularity);
-        $clientsData = $this->getClientsData($start, $end, $granularity);
-        $invoicesData = $this->getInvoicesData($start, $end, $granularity);
-        $totalInvoicesAmount = $this->getTotalInvoicesAmount($start, $end);
+        // Данные для виджетов
+        $clientStats = $this->getClientStats($start, $end);
+        $bonusCardStats = $this->getBonusCardStats($start, $end);
+        $invoiceStats = $this->getInvoiceStats($start, $end);
+
+        // Данные для графика
         $usageDurationData = $this->getUsageDurationData($start, $end, $granularity);
+        $invoicesAmountByMonthData = $this->getInvoicesAmountByMonthData($start, $end, $granularity);
+
 
         return view('dashboard', compact(
-            'bonusCardsData',
-            'clientsData',
-            'invoicesData',
-            'totalInvoicesAmount',
+            'clientStats',
+            'bonusCardStats',
+            'invoiceStats',
             'usageDurationData',
+            'invoicesAmountByMonthData',
             'period',
             'startDate',
             'endDate',
@@ -53,43 +56,64 @@ class CarwashDashboardController extends Controller
         ));
     }
 
-    protected function getBonusCardsData($start, $end, $granularity)
+    protected function getClientStats($start, $end)
     {
-        $query = CarwashBonusCard::selectRaw('COUNT(*) as total, SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as active, SUM(CASE WHEN status = "blocked" THEN 1 ELSE 0 END) as blocked');
+        $query = CarwashClient::whereBetween('created_at', [$start, $end]);
 
-        return $this->aggregateByPeriod($query, $start, $end, $granularity, 'created_at');
+        $total = (clone $query)->count();
+        $active = (clone $query)->where('status', 'active')->count();
+        $blocked = (clone $query)->where('status', 'blocked')->count();
+        $without_card = (clone $query)->doesntHave('bonusCards')->count();
+
+        return (object) [
+            'total' => $total,
+            'active' => $active,
+            'blocked' => $blocked,
+            'without_card' => $without_card,
+        ];
     }
 
-    protected function getClientsData($start, $end, $granularity)
+    protected function getBonusCardStats($start, $end)
     {
-        $query = CarwashClient::selectRaw('COUNT(*) as total, SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as active, SUM(CASE WHEN status = "blocked" THEN 1 ELSE 0 END) as blocked');
-
-        return $this->aggregateByPeriod($query, $start, $end, $granularity, 'created_at');
+        return CarwashBonusCard::whereBetween('created_at', [$start, $end])
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as active')
+            ->selectRaw('SUM(CASE WHEN status = "blocked" THEN 1 ELSE 0 END) as blocked')
+            ->first();
     }
 
-    protected function getInvoicesData($start, $end, $granularity)
+    protected function getInvoiceStats($start, $end)
     {
-        $query = CarwashInvoice::selectRaw('COUNT(*) as total');
+        $invoiceData = CarwashInvoice::whereBetween('created_at', [$start, $end])
+            ->selectRaw('COUNT(*) as total_count, SUM(amount) as total_amount')
+            ->first();
 
-        return $this->aggregateByPeriod($query, $start, $end, $granularity, 'created_at');
-    }
+        $totalUsageDurationSeconds = CarwashBonusCardStat::whereBetween('start_time', [$start, $end])
+            ->sum('duration_seconds');
 
-    protected function getTotalInvoicesAmount($start, $end)
-    {
-        return CarwashInvoice::whereBetween('created_at', [$start, $end])->sum('amount');
+        return (object) [
+            'total_count' => $invoiceData->total_count ?? 0,
+            'total_amount' => $invoiceData->total_amount ?? 0,
+            'total_usage_duration_seconds' => $totalUsageDurationSeconds ?? 0,
+        ];
     }
 
     protected function getUsageDurationData($start, $end, $granularity)
     {
-        $query = CarwashBonusCardStat::selectRaw('SUM(duration_seconds) as total_duration');
-
-        return $this->aggregateByPeriod($query, $start, $end, $granularity, 'start_time');
+        $query = CarwashBonusCardStat::selectRaw('SUM(duration_seconds) as value_to_aggregate');
+        return $this->aggregateByPeriod($query, $start, $end, $granularity, 'start_time', 'value_to_aggregate', true);
     }
 
-    protected function aggregateByPeriod($query, $start, $end, $granularity, $dateColumn)
+    protected function getInvoicesAmountByMonthData($start, $end, $granularity)
+    {
+        $query = CarwashInvoice::selectRaw('SUM(amount) as value_to_aggregate');
+        return $this->aggregateByPeriod($query, $start, $end, $granularity, 'created_at', 'value_to_aggregate', false);
+    }
+
+    protected function aggregateByPeriod($query, $start, $end, $granularity, $dateColumn, $valueColumn, $convertToMinutesAndCeil = false)
     {
         $labels = [];
-        $data = ['total' => [], 'active' => [], 'blocked' => [], 'total_duration' => []];
+        $data = [];
 
         if ($granularity === 'day') {
             $interval = '1 day';
@@ -108,16 +132,15 @@ class CarwashDashboardController extends Controller
             $next = $current->copy()->add($interval);
 
             $result = (clone $query)
-                ->whereBetween($dateColumn, [$current, $next->subSecond()])
+                ->whereBetween($dateColumn, [$current, $next->copy()->subSecond()])
                 ->first();
 
-            $data['total'][] = $result->total ?? 0;
-            if (isset($result->active)) {
-                $data['active'][] = $result->active ?? 0;
-                $data['blocked'][] = $result->blocked ?? 0;
-            }
-            if (isset($result->total_duration)) {
-                $data['total_duration'][] = $result->total_duration ?? 0;
+            $value = $result->{$valueColumn} ?? 0;
+
+            if ($convertToMinutesAndCeil) {
+                $data[] = (int) ceil($value / 60);
+            } else {
+                $data[] = $value;
             }
 
             $current = $next;
