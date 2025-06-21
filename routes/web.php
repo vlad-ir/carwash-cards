@@ -31,6 +31,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Клиенты
         Route::post('/carwash_clients/deleteSelected', [CarwashClientController::class, 'deleteSelected'])->name('carwash_clients.deleteSelected');
+        Route::post('/carwash_clients/create_invoices_for_selected', [CarwashClientController::class, 'createInvoicesForSelected'])->name('carwash_clients.create_invoices_for_selected');
         Route::get('/carwash_clients/data', [CarwashClientController::class, 'getClientData'])->name('carwash_clients.data');
         Route::get('/carwash_clients/get_all_ids', [CarwashClientController::class, 'getAllClientIds'])->name('carwash_clients.get_all_ids');
         Route::get('/carwash-clients/{clientId}/bonus-cards-data', [CarwashClientController::class, 'getClientBonusCardsData'])->name('carwash_clients.bonus_cards_data');

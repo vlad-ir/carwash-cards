@@ -6,6 +6,7 @@
         <div class="mb-3">
             <a href="{{ route('carwash_clients.create') }}" class="btn btn-primary">Добавить клиента</a>
             <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
+            <button id="createInvoicesSelected" class="btn btn-success" disabled>Создать счета для выбранных</button>
         </div>
 
         <table id="clientsTable" class="table table-bordered table-hover dataTable no-footer">
@@ -68,6 +69,9 @@
             </div>
         </div>
     </div>
+
+    <x-confirm-modal />
+    <x-create-invoices-modal />
 
     @push('scripts')
         <script>
@@ -260,6 +264,7 @@
                                 updateSelectedCount();
                                 updateSelectAllCheckboxState();
                                 $('#deleteSelected').prop('disabled', selectedIds.length === 0);
+                                $('#createInvoicesSelected').prop('disabled', selectedIds.length === 0);
                             },
                             error: function (xhr) {
                                 console.error("Ошибка при получении всех ID клиентов:", xhr);
@@ -275,6 +280,7 @@
                         updateSelectedCount();
                         updateSelectAllCheckboxState();
                         $('#deleteSelected').prop('disabled', true);
+                        $('#createInvoicesSelected').prop('disabled', true);
                     }
                 });
 
@@ -291,6 +297,7 @@
                     updateSelectedCount();
                     updateSelectAllCheckboxState();
                     $('#deleteSelected').prop('disabled', selectedIds.length === 0);
+                    $('#createInvoicesSelected').prop('disabled', selectedIds.length === 0);
                 });
 
                 $('#deleteSelected').on('click', function () {
@@ -309,10 +316,53 @@
                                 selectedIds = [];
                                 allRecordsGloballySelected = false; // Added line
                                 $('#deleteSelected').prop('disabled', true);
+                                $('#createInvoicesSelected').prop('disabled', true);
                                 table.draw();
                             },
                             error: function () {
                                 showToast('Ошибка', 'Ошибка при удалении клиентов.', 'error');
+                            }
+                        });
+                    });
+                });
+
+                $('#createInvoicesSelected').on('click', function () {
+                    if (selectedIds.length === 0) return;
+
+                    const modal = new bootstrap.Modal('#createInvoicesModal');
+                    $('#createInvoicesMessage').text(`Создать счета для ${selectedIds.length} выбранных клиентов?`);
+                    modal.show();
+
+                    $('#confirmCreateInvoicesButton').off('click').on('click', function() {
+                        const month = $('#invoiceMonth').val();
+                        const year = $('#invoiceYear').val();
+                        const sendEmail = $('#sendEmailOnCreate').is(':checked');
+                        modal.hide();
+
+                        $.ajax({
+                            url: "{{ route('carwash_clients.create_invoices_for_selected') }}",
+                            method: 'POST',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                ids: selectedIds,
+                                month: month,
+                                year: year,
+                                send_email: sendEmail
+                            },
+                            success: function (response) {
+                                showToast('Успех', response.success, 'success');
+                                selectedIds = [];
+                                allRecordsGloballySelected = false;
+                                $('#deleteSelected').prop('disabled', true);
+                                $('#createInvoicesSelected').prop('disabled', true);
+                                table.draw(); // Обновить таблицу, чтобы сбросить выделение чекбоксов
+                            },
+                            error: function (xhr) {
+                                let errorMessage = 'Ошибка при создании счетов.';
+                                if (xhr.responseJSON && xhr.responseJSON.error) {
+                                    errorMessage = xhr.responseJSON.error;
+                                }
+                                showToast('Ошибка', errorMessage, 'error');
                             }
                         });
                     });

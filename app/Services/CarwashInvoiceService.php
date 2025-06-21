@@ -21,32 +21,43 @@ use Illuminate\Support\Facades\DB;
 class CarwashInvoiceService
 {
     /**
-     * Creates and sends an invoice for a given client for the previous month.
+     * Creates and sends an invoice for a given client for a specific month and year.
      *
      * @param CarwashClient $client
-     * @param Carbon $periodDate Date based on which the reporting period (previous month) is determined.
+     * @param int $month
+     * @param int $year
+     * @param bool $sendEmail Indicates whether to send the invoice via email.
      * @return bool True on success, false on failure.
      */
-    public function createAndSendInvoiceForClient(CarwashClient $client, Carbon $periodDate): bool
+    public function createAndSendInvoiceForClient(CarwashClient $client, int $month, int $year, bool $sendEmail = true): bool
     {
-        Log::info("Generating invoice for client ID: {$client->id}, period base date: {$periodDate->toDateString()}");
+        Log::info("Processing invoice for client ID: {$client->id}, period: {$year}-{$month}, send email: " . ($sendEmail ? 'yes' : 'no'));
 
         DB::beginTransaction();
         try {
-            [$periodStart, $periodEnd] = $this->getReportingPeriod($periodDate);
-            $client->load('bonusCards');
+            [$periodStart, $periodEnd] = $this->getReportingPeriodForMonthYear($year, $month);
 
+            // Удаляем существующие счета для этого клиента за этот период
+            CarwashInvoice::where('client_id', $client->id)
+                ->where('period_start', $periodStart->toDateString())
+                ->where('period_end', $periodEnd->toDateString())
+                ->each(function ($invoice) {
+                    if ($invoice->file_path && File::exists(storage_path('app/' . $invoice->file_path))) {
+                        File::delete(storage_path('app/' . $invoice->file_path));
+                        Log::info("Deleted old invoice file: {$invoice->file_path}");
+                    }
+                    $invoice->delete();
+                });
+            Log::info("Deleted existing DB invoice entries for client ID: {$client->id} for period {$periodStart->toDateString()} - {$periodEnd->toDateString()}");
+
+            $client->load('bonusCards');
             [$total, $active, $blocked] = $this->getCardCounts($client);
             [$cardStats, $amountWithoutVat] = $this->gatherUsageStats($client, $periodStart, $periodEnd);
 
-            // Получаем следующий номер счёта
-            $nextInvoiceNumber = CarwashInvoice::max('id') + 1;
+            $nextInvoiceNumber = (CarwashInvoice::max('id') ?? 0) + 1;
 
-            // Проверяем: если нет использования — НЕ формируем файл, но СОХРАНЯЕМ инвойс с amount = 0
             if (empty($cardStats) || $amountWithoutVat <= 0) {
-                $vatConfig = $this->calculateVat(0); // Рассчитываем НДС для 0
-
-                // Сохраняем "нулевой" счет в БД
+                $vatConfig = $this->calculateVat(0);
                 CarwashInvoice::create([
                     'client_id' => $client->id,
                     'amount' => $vatConfig['amountWithVat'],
@@ -56,17 +67,16 @@ class CarwashInvoiceService
                     'active_cards_count' => $active,
                     'blocked_cards_count' => $blocked,
                     'file_path' => null,
-                    'sent_at' => now(),
+                    'sent_at' => now(), // Поле 'sent_at' может быть использовано для отслеживания времени создания
+                    'sent_to_email_at' => null, // Не отправляем email для нулевого счета
                 ]);
-
-                Log::info("Client ID {$client->id} has no usage or zero amount. Invoice with zero amount saved to database.");
+                Log::info("Client ID {$client->id} has no usage or zero amount. Zero-amount invoice saved.");
                 DB::commit();
                 return true;
             }
 
             $vatConfig = $this->calculateVat($amountWithoutVat);
-
-            $xlsPath = $this->generateInvoiceXls(
+            $xlsRelativePath = $this->generateInvoiceXls(
                 $client, $periodStart->toDateString(), $periodEnd->toDateString(),
                 $cardStats, $amountWithoutVat,
                 $vatConfig['vatAmount'], $vatConfig['amountWithVat'], $vatConfig['vatRate'],
@@ -81,28 +91,48 @@ class CarwashInvoiceService
                 'total_cards_count' => $total,
                 'active_cards_count' => $active,
                 'blocked_cards_count' => $blocked,
-                'file_path' => $xlsPath,
-                'sent_at' => now(),
+                'file_path' => $xlsRelativePath,
+                'sent_at' => now(), // Время создания
+                'sent_to_email_at' => null, // Инициализируем как null
             ]);
 
-            Mail::to($client->email)->send(new CarwashInvoiceMail($client, $invoice, $xlsPath));
+            if ($sendEmail) {
+                if (empty($client->email)) {
+                    Log::warning("Client ID {$client->id} has no email address. Invoice not sent via email.");
+                    // Не обновляем sent_to_email_at, оно останется null
+                } else {
+                    $fullXlsPath = storage_path('app/' . $xlsRelativePath);
+                    if (!File::exists($fullXlsPath)) {
+                        Log::error("Invoice file not found at {$fullXlsPath} for client ID {$client->id}. Email not sent.");
+                        // Можно решить, считать ли это ошибкой для $errorCount в контроллере
+                        // Не обновляем sent_to_email_at
+                    } else {
+                        Mail::to($client->email)->send(new CarwashInvoiceMail($client, $invoice, $fullXlsPath));
+                        $invoice->sent_to_email_at = now();
+                        $invoice->save(); // Сохраняем время отправки
+                        Log::info("Invoice successfully generated AND EMAILED for client ID: {$client->id}");
+                    }
+                }
+            } else {
+                Log::info("Invoice successfully generated BUT NOT EMAILED for client ID: {$client->id} as per request.");
+            }
 
             DB::commit();
-            Log::info("Invoice successfully generated and sent for client ID: {$client->id}");
             return true;
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error("Invoice generation failed for client ID {$client->id}: {$e->getMessage()}", [
+            Log::error("Invoice processing failed for client ID {$client->id}: {$e->getMessage()}", [
                 'trace' => $e->getTraceAsString()
             ]);
             return false;
         }
     }
 
-    private function getReportingPeriod(Carbon $date): array
+    private function getReportingPeriodForMonthYear(int $year, int $month): array
     {
-        $start = $date->copy()->subMonthNoOverflow()->startOfMonth();
-        $end = $date->copy()->subMonthNoOverflow()->endOfMonth();
+        $date = Carbon::createFromDate($year, $month, 1);
+        $start = $date->copy()->startOfMonth();
+        $end = $date->copy()->endOfMonth();
         return [$start, $end];
     }
 
@@ -300,20 +330,28 @@ class CarwashInvoiceService
 
 
             // --- Save File ---
-            $outputDir = storage_path('app/public/invoices');
+            $outputDir = storage_path('app/public/invoices'); // Это публичный путь, файлы счетов должны быть приватными
             File::ensureDirectoryExists($outputDir);
+
+            // Изменяем путь сохранения на приватный и структуру имени файла
+            $privateOutputDir = storage_path('app/private/invoices/' . $client->id . '/' . Carbon::parse($periodStart)->format('Y-m'));
+            File::ensureDirectoryExists($privateOutputDir);
+
             $fileName = sprintf(
-                'invoice_%s_%s_%s__%d.xls',
-                $currentDate->format('Y'),
-                $currentDate->format('m'),
-                $currentDate->format('d'),
-                $client->id
+                'invoice_%s_client_%d_num_%d.xls',
+                Carbon::parse($periodStart)->format('Y-m-d'),
+                $client->id,
+                $nextInvoiceNumber
             );
-            $fullSavePath = $outputDir . '/' . $fileName;
+            $fullSavePath = $privateOutputDir . '/' . $fileName;
+
+            // Относительный путь для сохранения в БД (без storage_path('app/'))
+            $relativePathForDb = 'private/invoices/' . $client->id . '/' . Carbon::parse($periodStart)->format('Y-m') . '/' . $fileName;
+
             $writer = new Xls($spreadsheet);
             $writer->save($fullSavePath);
             Log::info("XLS generated for client {$client->id} at {$fullSavePath}");
-            return $fullSavePath;
+            return $relativePathForDb; // Возвращаем относительный путь
 
         } catch (Exception $e) {
             Log::error("Error in generateInvoiceXls for client {$client->id}: {$e->getMessage()}", ['exception' => $e]);

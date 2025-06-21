@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCarwashClientRequest;
 use App\Models\CarwashClient;
+use App\Services\CarwashInvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\Facades\DataTables;
 
 class CarwashClientController extends Controller
@@ -149,5 +151,53 @@ class CarwashClientController extends Controller
 
         CarwashClient::whereIn('id', $request->ids)->delete();
         return response()->json(['success' => 'Выбранные клиенты удалены.']);
+    }
+
+    public function createInvoicesForSelected(Request $request, CarwashInvoiceService $invoiceService)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:carwash_clients,id',
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:' . (date('Y') - 10) . '|max:' . (date('Y') + 1),
+            'send_email' => 'required|boolean',
+        ]);
+
+        $clientIds = $request->ids;
+        $month = $request->month;
+        $year = $request->year;
+        $sendEmail = $request->send_email;
+        $successCount = 0;
+        $errorCount = 0;
+
+        foreach ($clientIds as $clientId) {
+            $client = CarwashClient::find($clientId);
+            if ($client) {
+                try {
+                    // Передаем месяц, год и флаг отправки email в сервис
+                    $result = $invoiceService->createAndSendInvoiceForClient($client, $month, $year, $sendEmail);
+                    if ($result) {
+                        $successCount++;
+                    } else {
+                        $errorCount++;
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error creating invoice for client {$clientId}: " . $e->getMessage());
+                    $errorCount++;
+                }
+            } else {
+                $errorCount++;
+            }
+        }
+
+        if ($successCount > 0 && $errorCount === 0) {
+            return response()->json(['success' => "Счета успешно созданы для {$successCount} клиентов."]);
+        } elseif ($successCount > 0 && $errorCount > 0) {
+            return response()->json(['success' => "Счета созданы для {$successCount} клиентов, но для {$errorCount} клиентов произошла ошибка."]);
+        } elseif ($successCount === 0 && $errorCount > 0) {
+            return response()->json(['error' => "Не удалось создать счета ни для одного из {$errorCount} выбранных клиентов."], 500);
+        } else {
+            return response()->json(['error' => "Не выбрано клиентов для создания счетов."], 400);
+        }
     }
 }
