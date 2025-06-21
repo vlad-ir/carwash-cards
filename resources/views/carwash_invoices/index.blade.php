@@ -54,9 +54,9 @@
                 <th>Активных карт</th>
                 <th>Блок. карт</th>
                 <th>Дата счета</th>
-                <th>Статус отправки</th> {{-- Новая колонка --}}
+                <th>Статус отправки</th>
                 <th>Файл счета</th>
-                <th class="no-sort text-center" style="width: 150px;">Действия</th> {{-- Увеличена ширина для доп. кнопок --}}
+                <th class="no-sort text-center" style="width: 150px;">Действия</th>
             </tr>
             </thead>
             <tbody></tbody>
@@ -141,7 +141,7 @@
                         invoicesTable.on('click', '.reissue-invoice-btn', function() {
                             const invoiceId = $(this).data('invoice-id');
                             const reissue_url = '{{ route('carwash_invoices.reissue', ':invoiceId') }}'.replace(':invoiceId', invoiceId);
-                            showConfirmModal(`Вы уверены, что хотите перевыставить счет #${invoiceId}? Это действие заменит существующий счет и отправит его на email клиенту.`, function () {
+                            showConfirmModal(`Вы уверены, что хотите перевыставить счет #${invoiceId}? Это действие заменит существующий счет.`, function () {
                                 $.ajax({
                                     url: reissue_url,
                                     method: 'POST',
