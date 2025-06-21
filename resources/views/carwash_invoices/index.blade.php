@@ -54,8 +54,9 @@
                 <th>Активных карт</th>
                 <th>Блок. карт</th>
                 <th>Дата счета</th>
+                <th>Статус отправки</th> {{-- Новая колонка --}}
                 <th>Файл счета</th>
-                <th class="no-sort text-center" style="width: 100px;">Действия</th>
+                <th class="no-sort text-center" style="width: 150px;">Действия</th> {{-- Увеличена ширина для доп. кнопок --}}
             </tr>
             </thead>
             <tbody></tbody>
@@ -89,11 +90,12 @@
                         {data: 'total_cards_count', name: 'total_cards_count'},
                         {data: 'active_cards_count', name: 'active_cards_count'},
                         {data: 'blocked_cards_count', name: 'blocked_cards_count'},
-                        {data: 'sent_at', name: 'sent_at'},
+                        {data: 'sent_at', name: 'sent_at'}, // Дата формирования файла
+                        {data: 'sent_to_email_at', name: 'sent_to_email_at'}, // Дата отправки на email
                         {data: 'file_link', name: 'file_link', orderable: false, searchable: false},
                         {data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center'}
                     ],
-                    order: [[8, 'desc']],
+                    order: [[8, 'desc']], // Сортировка по дате счета (sent_at)
                     initComplete: function () {
                         var api = this.api();
 
@@ -133,6 +135,45 @@
                             const invoiceId = $(this).data('invoice-id');
                             showConfirmModal(`Вы уверены, что хотите удалить счет #${invoiceId}?`, function () {
                                 form.submit();
+                            });
+                        });
+
+                        invoicesTable.on('click', '.reissue-invoice-btn', function() {
+                            const invoiceId = $(this).data('invoice-id');
+                            const reissue_url = '{{ route('carwash_invoices.reissue', ':invoiceId') }}'.replace(':invoiceId', invoiceId);
+                            showConfirmModal(`Вы уверены, что хотите перевыставить счет #${invoiceId}? Это действие заменит существующий счет и отправит его на email клиенту.`, function () {
+                                $.ajax({
+                                    url: reissue_url,
+                                    method: 'POST',
+                                    data: { _token: "{{ csrf_token() }}" },
+                                    success: function(response) {
+                                        showToast('Успех', response.success, 'success');
+                                        invoicesTable.draw();
+                                    },
+                                    error: function(xhr) {
+                                        showToast('Ошибка', xhr.responseJSON?.error || 'Ошибка при перевыставлении счета.', 'error');
+                                    }
+                                });
+                            });
+                        });
+
+                        invoicesTable.on('click', '.send-email-btn', function() {
+                            const invoiceId = $(this).data('invoice-id');
+                            // URL для запроса
+                            const mail_url = '{{ route('carwash_invoices.send_email_manually', ':invoiceId') }}'.replace(':invoiceId', invoiceId);
+                            showConfirmModal(`Вы уверены, что хотите отправить счет #${invoiceId} на email клиенту?`, function () {
+                                $.ajax({
+                                    url: mail_url,
+                                    method: 'POST',
+                                    data: { _token: "{{ csrf_token() }}" },
+                                    success: function(response) {
+                                        showToast('Успех', response.success, 'success');
+                                        invoicesTable.draw(); // Обновить таблицу
+                                    },
+                                    error: function(xhr) {
+                                        showToast('Ошибка', xhr.responseJSON?.error || 'Ошибка при отправке счета на email.', 'error');
+                                    }
+                                });
                             });
                         });
                     }

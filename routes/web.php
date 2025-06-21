@@ -55,6 +55,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/carwash_invoices/deleteSelected', [CarwashInvoiceController::class, 'deleteSelected'])->name('carwash_invoices.deleteSelected');
         Route::get('/carwash_invoices/data', [CarwashInvoiceController::class, 'getInvoicesData'])->name('carwash_invoices.data');
         Route::get('/carwash_invoices/get_all_ids', [CarwashInvoiceController::class, 'getAllInvoiceIds'])->name('carwash_invoices.get_all_ids');
+        Route::post('/carwash_invoices/{invoice}/reissue', [CarwashInvoiceController::class, 'reissue'])->name('carwash_invoices.reissue');
+        Route::post('/carwash_invoices/{invoice}/send_email_manually', [CarwashInvoiceController::class, 'sendEmailManually'])->name('carwash_invoices.send_email_manually');
         Route::resource('carwash_invoices', CarwashInvoiceController::class)->except(['edit', 'update']);
     });
 

@@ -7,6 +7,7 @@ use App\Models\CarwashBonusCard;
 use App\Models\CarwashBonusCardStat;
 use App\Models\CarwashInvoice;
 use App\Mail\CarwashInvoiceMail;
+use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
@@ -42,9 +43,13 @@ class CarwashInvoiceService
                 ->where('period_start', $periodStart->toDateString())
                 ->where('period_end', $periodEnd->toDateString())
                 ->each(function ($invoice) {
-                    if ($invoice->file_path && File::exists(storage_path('app/' . $invoice->file_path))) {
-                        File::delete(storage_path('app/' . $invoice->file_path));
-                        Log::info("Deleted old invoice file: {$invoice->file_path}");
+                    if ($invoice->file_path) {
+                        // file_path хранится как 'public/invoices/...'
+                        $publicRelativePath = str_replace('public/', '', $invoice->file_path);
+                        if (Storage::disk('public')->exists($publicRelativePath)) {
+                            Storage::disk('public')->delete($publicRelativePath);
+                            Log::info("Deleted old invoice file from public disk: {$publicRelativePath}");
+                        }
                     }
                     $invoice->delete();
                 });
@@ -101,13 +106,16 @@ class CarwashInvoiceService
                     Log::warning("Client ID {$client->id} has no email address. Invoice not sent via email.");
                     // Не обновляем sent_to_email_at, оно останется null
                 } else {
-                    $fullXlsPath = storage_path('app/' . $xlsRelativePath);
-                    if (!File::exists($fullXlsPath)) {
-                        Log::error("Invoice file not found at {$fullXlsPath} for client ID {$client->id}. Email not sent.");
+                    // $xlsRelativePath теперь 'public/invoices/...'
+                    // Для аттача нужен абсолютный путь к файлу на диске.
+                    $absolutePathToAttach = Storage::disk('public')->path(str_replace('public/', '', $xlsRelativePath));
+
+                    if (!File::exists($absolutePathToAttach)) {
+                        Log::error("Invoice file not found at {$absolutePathToAttach} for client ID {$client->id}. Email not sent.");
                         // Можно решить, считать ли это ошибкой для $errorCount в контроллере
                         // Не обновляем sent_to_email_at
                     } else {
-                        Mail::to($client->email)->send(new CarwashInvoiceMail($client, $invoice, $fullXlsPath));
+                        Mail::to($client->email)->send(new CarwashInvoiceMail($client, $invoice, $absolutePathToAttach));
                         $invoice->sent_to_email_at = now();
                         $invoice->save(); // Сохраняем время отправки
                         Log::info("Invoice successfully generated AND EMAILED for client ID: {$client->id}");
@@ -330,12 +338,8 @@ class CarwashInvoiceService
 
 
             // --- Save File ---
-            $outputDir = storage_path('app/public/invoices'); // Это публичный путь, файлы счетов должны быть приватными
-            File::ensureDirectoryExists($outputDir);
-
-            // Изменяем путь сохранения на приватный и структуру имени файла
-            $privateOutputDir = storage_path('app/private/invoices/' . $client->id . '/' . Carbon::parse($periodStart)->format('Y-m'));
-            File::ensureDirectoryExists($privateOutputDir);
+            $publicOutputDir = storage_path('app/public/invoices/' . $client->id . '/' . Carbon::parse($periodStart)->format('Y-m'));
+            File::ensureDirectoryExists($publicOutputDir);
 
             $fileName = sprintf(
                 'invoice_%s_client_%d_num_%d.xls',
@@ -343,15 +347,15 @@ class CarwashInvoiceService
                 $client->id,
                 $nextInvoiceNumber
             );
-            $fullSavePath = $privateOutputDir . '/' . $fileName;
+            $fullSavePath = $publicOutputDir . '/' . $fileName;
 
-            // Относительный путь для сохранения в БД (без storage_path('app/'))
-            $relativePathForDb = 'private/invoices/' . $client->id . '/' . Carbon::parse($periodStart)->format('Y-m') . '/' . $fileName;
+            // Относительный путь для сохранения в БД
+            $relativePathForDb = 'public/invoices/' . $client->id . '/' . Carbon::parse($periodStart)->format('Y-m') . '/' . $fileName;
 
             $writer = new Xls($spreadsheet);
             $writer->save($fullSavePath);
             Log::info("XLS generated for client {$client->id} at {$fullSavePath}");
-            return $relativePathForDb; // Возвращаем относительный путь
+            return $relativePathForDb; // Возвращаем относительный путь для public диска
 
         } catch (Exception $e) {
             Log::error("Error in generateInvoiceXls for client {$client->id}: {$e->getMessage()}", ['exception' => $e]);

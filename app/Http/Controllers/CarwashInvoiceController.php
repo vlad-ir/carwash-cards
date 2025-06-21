@@ -40,8 +40,6 @@ class CarwashInvoiceController extends Controller
      */
     public function index(): View
     {
-        // Filters will be passed to the view to pre-fill the filter form if needed
-        // but the actual data loading and filtering is done by getInvoicesData
         return view('carwash_invoices.index');
     }
 
@@ -108,33 +106,124 @@ class CarwashInvoiceController extends Controller
             ->addColumn('client_short_name', fn($invoice) => $invoice->client->short_name ?? 'N/A')
             ->editColumn('period_start', fn($invoice) => Carbon::parse($invoice->period_start)->isoFormat('MMMM YYYY'))
             ->editColumn('period_end', fn($invoice) => Carbon::parse($invoice->period_end)->isoFormat('MMMM YYYY'))
-            ->editColumn('sent_at', fn($invoice) => $invoice->sent_at ? Carbon::parse($invoice->sent_at)->format('d.m.Y') : 'N/A')
+            ->editColumn('sent_at', fn($invoice) => $invoice->sent_at ? Carbon::parse($invoice->sent_at)->format('d.m.Y H:i') : 'N/A') // Добавлено время
+            ->addColumn('sent_to_email_at', function ($invoice) {
+                if ($invoice->sent_to_email_at) {
+                    return Carbon::parse($invoice->sent_to_email_at)->format('d.m.Y H:i');
+                }
+                return $invoice->client && $invoice->client->email ? 'Не отправлен' : 'Нет email у клиента';
+            })
             ->addColumn('file_link', function($invoice) {
                 if ($invoice->file_path) {
-                    $fileName = basename($invoice->file_path);
-                    $relativePath = 'invoices/' . $fileName;
-                    if (Storage::disk('public')->exists($relativePath)) {
-                        return '<a href="'.Storage::disk('public')->url($relativePath).'" target="_blank" class="btn btn-sm btn-outline-success"><i class="fas fa-file-excel"></i> XLS</a>';
+                    // file_path теперь 'public/invoices/...'
+                    // Storage::url преобразует 'public/path/to/file.xls' в '/storage/path/to/file.xls'
+                    $publicRelativePath = str_replace('public/', '', $invoice->file_path);
+                    if (Storage::disk('public')->exists($publicRelativePath)) {
+                        return '<a href="'.Storage::url($publicRelativePath).'" target="_blank" class="btn btn-sm btn-outline-success" title="Скачать счет"><i class="fas fa-file-excel"></i> XLS</a>';
                     }
                 }
                 return '<span class="text-muted">Нет файла</span>';
             })
-            ->addColumn('action', function (CarwashInvoice $invoice) { // Route model binding not directly usable here, but type hint is good
-                return '
-                    <div class="action-buttons">
-                        <a href="' . route('carwash_invoices.show', $invoice->id) . '" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>
-                        <form action="' . route('carwash_invoices.destroy', $invoice->id) . '" method="POST" style="display:inline;" class="delete-form">
+            ->addColumn('action', function (CarwashInvoice $invoice) {
+                $buttons = '<div class="action-buttons">';
+                $buttons .= '<a href="' . route('carwash_invoices.show', $invoice->id) . '" class="btn btn-sm btn-outline-primary" title="Просмотр"><i class="fas fa-eye"></i></a>';
+
+                // Кнопка "Перевыставить счет"
+                $buttons .= '<button type="button" class="btn btn-sm btn-outline-info reissue-invoice-btn ms-1" data-invoice-id="' . $invoice->id . '" title="Перевыставить счет"><i class="fas fa-redo"></i></button>';
+
+                // Кнопка "Отправить на email"
+                $canSendEmail = false;
+                if ($invoice->file_path) {
+                    $publicRelativePathForCheck = str_replace('public/', '', $invoice->file_path);
+                    if (Storage::disk('public')->exists($publicRelativePathForCheck)) {
+                        $canSendEmail = true;
+                    }
+                }
+
+                if (!$invoice->sent_to_email_at && $invoice->client && $invoice->client->email && $canSendEmail) {
+                    $buttons .= '<button type="button" class="btn btn-sm btn-outline-success send-email-btn ms-1" data-invoice-id="' . $invoice->id . '" title="Отправить на email"><i class="fas fa-envelope"></i></button>';
+                } elseif (!($invoice->client && $invoice->client->email)) {
+                    $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="У клиента не указан email для отправки" disabled><i class="fas fa-envelope"></i></button>';
+                } elseif (!$canSendEmail) {
+                    $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Файл счета отсутствует или недоступен" disabled><i class="fas fa-envelope"></i></button>';
+                }
+
+                $buttons .= '<form action="' . route('carwash_invoices.destroy', $invoice->id) . '" method="POST" style="display:inline;" class="delete-form ms-1">
                             ' . csrf_field() . '
                             ' . method_field('DELETE') . '
                             <button type="submit" class="btn btn-sm btn-outline-danger delete-single"
                                     title="Удалить" data-invoice-id="' . $invoice->id . '">
                                 <i class="fas fa-trash"></i>
                             </button>
-                        </form>
-                    </div>';
+                        </form>';
+                $buttons .= '</div>';
+                return $buttons;
             })
             ->rawColumns(['checkbox', 'action', 'file_link'])
             ->make(true);
+    }
+
+    // Метод downloadInvoice больше не нужен, так как файлы доступны по публичной ссылке
+
+    public function reissue(Request $request, CarwashInvoice $invoice): JsonResponse
+    {
+        $client = $invoice->client;
+        if (!$client) {
+            return response()->json(['error' => 'Клиент для данного счета не найден.'], 404);
+        }
+
+        try {
+            $periodStart = Carbon::parse($invoice->period_start);
+            $month = $periodStart->month;
+            $year = $periodStart->year;
+
+            // Передаем true для sendEmail по умолчанию при перевыставлении
+            $success = $this->invoiceService->createAndSendInvoiceForClient($client, $month, $year, true);
+
+            if ($success) {
+                return response()->json(['success' => 'Счет #' . $invoice->id . ' успешно перевыставлен и отправлен.']);
+            } else {
+                return response()->json(['error' => 'Не удалось перевыставить счет. Проверьте логи.'], 500);
+            }
+        } catch (\Exception $e) {
+            Log::error("Error reissuing invoice #{$invoice->id}: " . $e->getMessage(), ['exception' => $e]);
+            return response()->json(['error' => 'Внутренняя ошибка сервера при перевыставлении счета.'], 500);
+        }
+    }
+
+    public function sendEmailManually(Request $request, CarwashInvoice $invoice): JsonResponse
+    {
+        $client = $invoice->client;
+
+        if (!$client) {
+            return response()->json(['error' => 'Клиент для данного счета не найден.'], 404);
+        }
+
+        if (empty($client->email)) {
+            return response()->json(['error' => 'У клиента не указан email адрес.'], 400);
+        }
+
+        if (empty($invoice->file_path)) {
+            return response()->json(['error' => 'Путь к файлу счета не указан.'], 400);
+        }
+
+        $publicRelativePath = str_replace('public/', '', $invoice->file_path);
+        if (!Storage::disk('public')->exists($publicRelativePath)) {
+            return response()->json(['error' => 'Файл счета не найден на диске public. Возможно, его нужно сначала сформировать/перевыставить.'], 400);
+        }
+
+        try {
+            $absolutePathToAttach = Storage::disk('public')->path($publicRelativePath);
+            Mail::to($client->email)->send(new \App\Mail\CarwashInvoiceMail($client, $invoice, $absolutePathToAttach));
+
+            $invoice->sent_to_email_at = now();
+            $invoice->save();
+
+            return response()->json(['success' => 'Счет #' . $invoice->id . ' успешно отправлен на email: ' . $client->email]);
+        } catch (\Exception $e) {
+            Log::error("Error sending invoice #{$invoice->id} manually: " . $e->getMessage(), ['exception' => $e]);
+            return response()->json(['error' => 'Ошибка при отправке email.'], 500);
+        }
     }
 
     /**
@@ -197,10 +286,8 @@ class CarwashInvoiceController extends Controller
      * @param \App\Models\CarwashInvoice $carwashInvoice
      * @return \Illuminate\View\View
      */
-    public function show(CarwashInvoice $carwashInvoice): View // Route model binding
+    public function show(CarwashInvoice $carwashInvoice): View
     {
-        // $carwashInvoice is already loaded via Route Model Binding
-        // Ensure client is loaded if accessed in view, though getInvoicesData loads it.
         $carwashInvoice->loadMissing('client:id,short_name');
 
         $carwashInvoice->download_url = null;
@@ -210,7 +297,7 @@ class CarwashInvoiceController extends Controller
                 $carwashInvoice->download_url = Storage::disk('public')->url($relativePath);
             }
         }
-        return view('carwash_invoices.show', ['invoice' => $carwashInvoice]); // Pass as 'invoice' for consistency if view expects that
+        return view('carwash_invoices.show', ['invoice' => $carwashInvoice]);
     }
 
     /**
@@ -219,15 +306,12 @@ class CarwashInvoiceController extends Controller
      * @param \App\Models\CarwashInvoice $carwashInvoice
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function destroy(CarwashInvoice $carwashInvoice): RedirectResponse // Route model binding
+    public function destroy(CarwashInvoice $carwashInvoice): RedirectResponse
     {
         if ($carwashInvoice->file_path) {
-            $publicPathBase = storage_path('app/public/');
-            if (strpos($carwashInvoice->file_path, $publicPathBase) === 0) {
-                $relativePathInsidePublic = str_replace($publicPathBase, '', $carwashInvoice->file_path);
-                if (Storage::disk('public')->exists($relativePathInsidePublic)) {
-                    Storage::disk('public')->delete($relativePathInsidePublic);
-                }
+            $publicRelativePath = str_replace('public/', '', $carwashInvoice->file_path);
+            if (Storage::disk('public')->exists($publicRelativePath)) {
+                Storage::disk('public')->delete($publicRelativePath);
             }
         }
         $carwashInvoice->delete();
@@ -249,15 +333,14 @@ class CarwashInvoiceController extends Controller
             'ids.*' => 'exists:carwash_invoices,id',
         ]);
 
-        $publicPathBase = storage_path('app/public/');
         $deletedCount = 0;
         foreach ($request->ids as $id) {
             $invoice = CarwashInvoice::find($id);
             if ($invoice) {
-                if ($invoice->file_path && strpos($invoice->file_path, $publicPathBase) === 0) {
-                    $relativePathInsidePublic = str_replace($publicPathBase, '', $invoice->file_path);
-                    if (Storage::disk('public')->exists($relativePathInsidePublic)) {
-                        Storage::disk('public')->delete($relativePathInsidePublic);
+                if ($invoice->file_path) {
+                    $publicRelativePath = str_replace('public/', '', $invoice->file_path);
+                    if (Storage::disk('public')->exists($publicRelativePath)) {
+                        Storage::disk('public')->delete($publicRelativePath);
                     }
                 }
                 $invoice->delete();
@@ -267,7 +350,4 @@ class CarwashInvoiceController extends Controller
         return response()->json(['success' => "Выбрано счетов для удаления: {$deletedCount}. Успешно удалено."]);
     }
 
-    // The old getInvoiceData is replaced by getInvoicesData for DataTables
-    // If the old one was used by something else, it might need to be kept or that other part updated.
-    // For this task, I am replacing it with the new DataTables source method.
 }

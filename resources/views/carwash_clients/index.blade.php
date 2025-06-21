@@ -5,8 +5,8 @@
         <h1>Клиенты</h1>
         <div class="mb-3">
             <a href="{{ route('carwash_clients.create') }}" class="btn btn-primary">Добавить клиента</a>
-            <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
             <button id="createInvoicesSelected" class="btn btn-success" disabled>Создать счета для выбранных</button>
+            <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>
 
         <table id="clientsTable" class="table table-bordered table-hover dataTable no-footer">
@@ -336,7 +336,7 @@
                     $('#confirmCreateInvoicesButton').off('click').on('click', function() {
                         const month = $('#invoiceMonth').val();
                         const year = $('#invoiceYear').val();
-                        const sendEmail = $('#sendEmailOnCreate').is(':checked');
+                        const sendEmail = $('#sendEmailOnCreate').is(':checked') ? 1 : 0; // Изменено здесь
                         modal.hide();
 
                         $.ajax({
