@@ -65,14 +65,14 @@ class CarwashCsvImportService
 
             $card = CarwashBonusCard::where('card_number', trim($cardId))->first();
             if (!$card) {
-                // Log::warning("Card not found: " . $cardId);
+                Log::warning("Card not found: " . $cardId);
                 continue;
             }
 
             // Обработка времени начала
             $startTimeRaw = trim($row[4] ?? '');
             if (empty($startTimeRaw) || $startTimeRaw === '--') {
-                // Log::error("Empty or invalid start time: " . $startTimeRaw);
+                Log::error("Empty or invalid start time: " . $startTimeRaw);
                 continue;
             }
 
@@ -82,7 +82,7 @@ class CarwashCsvImportService
                 ->first();
 
             if ($existingStat) {
-                //Log::info("Skipping duplicate stat entry for card_id: {$card->id} {$card->name} {$card->card_number}, start_time: {$startTimeRaw}");
+                Log::info("Skipping duplicate stat entry for card_id: {$card->id} {$card->name} {$card->card_number}, start_time: {$startTimeRaw}");
                 continue; // Пропускаем создание этой записи
             }
 
