@@ -272,7 +272,7 @@ class CarwashInvoiceService
                 // Название карты и статус
                 $sheet->setCellValue("B{$currentRow}", (string) $card->card_number);
                 $sheet->getStyle("B{$currentRow}")->getFont()->setBold(true);
-                $sheet->getStyle("A{$currentRow}:J{$currentRow}")->getBorders()
+                $sheet->getStyle("A{$currentRow}:I{$currentRow}")->getBorders()
                     ->getAllBorders()
                     ->setBorderStyle(Border::BORDER_THIN);
                 $currentRow++;
@@ -293,16 +293,16 @@ class CarwashInvoiceService
                     $sheet->setCellValue("A{$currentRow}", $globalCounter++);
                     $sheet->setCellValue("C{$currentRow}", \Carbon\Carbon::parse($stat->start_time)->format('d.m.Y H:i'));
                     $sheet->setCellValue("D{$currentRow}", $durationSeconds);
-                    $sheet->setCellValue("E{$currentRow}", $remainingBalanceSeconds);
-                    $sheet->setCellValue("F{$currentRow}", $ratePerMinute);
-                    $sheet->setCellValue("G{$currentRow}", $amountForCard);
-                    $sheet->setCellValue("H{$currentRow}", $vatRate);
-                    $sheet->getStyle("H{$currentRow}")
+                    //$sheet->setCellValue("E{$currentRow}", $remainingBalanceSeconds);
+                    $sheet->setCellValue("E{$currentRow}", $ratePerMinute);
+                    $sheet->setCellValue("F{$currentRow}", $amountForCard);
+                    $sheet->setCellValue("G{$currentRow}", $vatRate);
+                    $sheet->getStyle("G{$currentRow}")
                         ->getNumberFormat()
                         ->setFormatCode('0"%"');
-                    $sheet->setCellValue("I{$currentRow}", $vatSum);
-                    $sheet->setCellValue("J{$currentRow}", $totalWithVat);
-                    $sheet->getStyle("A{$currentRow}:J{$currentRow}")->getBorders()
+                    $sheet->setCellValue("H{$currentRow}", $vatSum);
+                    $sheet->setCellValue("I{$currentRow}", $totalWithVat);
+                    $sheet->getStyle("A{$currentRow}:I{$currentRow}")->getBorders()
                         ->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN);
 
@@ -314,25 +314,25 @@ class CarwashInvoiceService
             // --- Итог по всем картам ---
             $sheet->setCellValue("C{$currentRow}", "ИТОГО:");
             $sheet->setCellValue("D{$currentRow}", "=SUM(D{$startRow}:D" . ($currentRow - 1) . ")");
-            $sheet->setCellValue("E{$currentRow}", "=SUM(E{$startRow}:E" . ($currentRow - 1) . ")");
-            $sheet->setCellValue("G{$currentRow}", "=SUM(G{$startRow}:G" . ($currentRow - 1) . ")");
+            //$sheet->setCellValue("E{$currentRow}", "=SUM(E{$startRow}:E" . ($currentRow - 1) . ")");
+            $sheet->setCellValue("F{$currentRow}", "=SUM(F{$startRow}:F" . ($currentRow - 1) . ")");
+            $sheet->setCellValue("H{$currentRow}", "=SUM(H{$startRow}:H" . ($currentRow - 1) . ")");
             $sheet->setCellValue("I{$currentRow}", "=SUM(I{$startRow}:I" . ($currentRow - 1) . ")");
-            $sheet->setCellValue("J{$currentRow}", "=SUM(J{$startRow}:J" . ($currentRow - 1) . ")");
-            $sheet->getStyle("A{$currentRow}:J{$currentRow}")->getFont()->setBold(true);
-            $sheet->getStyle("D{$currentRow}:J{$currentRow}")->getBorders()
+            $sheet->getStyle("A{$currentRow}:I{$currentRow}")->getFont()->setBold(true);
+            $sheet->getStyle("D{$currentRow}:I{$currentRow}")->getBorders()
                 ->getAllBorders()
                 ->setBorderStyle(Border::BORDER_THIN);
 
-            $sheet->getStyle("D{$currentRow}:E{$currentRow}")
+            $sheet->getStyle("D{$currentRow}")
                 ->getNumberFormat()
                 ->setFormatCode("# ##0");
 
-            $sheet->getStyle("F{$currentRow}:G{$currentRow}")
+            $sheet->getStyle("E{$currentRow}:F{$currentRow}")
                 ->getNumberFormat()
                 ->setFormatCode("# ##0.00");
 
 
-            $sheet->getStyle("I{$currentRow}:J{$currentRow}")
+            $sheet->getStyle("H{$currentRow}:I{$currentRow}")
                 ->getNumberFormat()
                 ->setFormatCode("# ##0.00");
 
