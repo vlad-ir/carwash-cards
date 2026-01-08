@@ -14,7 +14,7 @@ class CarwashCsvImportStatsCommand extends Command
     {
         $this->info('Начало импорта статистики...');
 
-        $service = new CsvImportService();
+        $service = new CarwashCsvImportService();
         $processed = $service->processCsvFiles();
 
         $this->info("Обработано файлов: {$processed}");

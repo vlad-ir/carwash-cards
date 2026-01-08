@@ -226,12 +226,14 @@ class CarwashInvoiceService
             $currentDate = Carbon::now();
 
             // --- Populate Client and Invoice Data (Header) ---
-            $sheet->setCellValue('A6', "Счет № AM-{$nextInvoiceNumber} от {$currentDate->format('d.m.Y')} г.");
+            $sheet->setCellValue('A6', "АКТ № AM-{$nextInvoiceNumber} от {$currentDate->format('d.m.Y')} г.");
             $sheet->setCellValue('A8', (string) $client->contract);
             $sheet->setCellValue('A9', "Заказчик: ".$client->full_name);
             $sheet->setCellValue('C25', (string) $client->full_name);
-            $sheet->setCellValue('A10', "Плательщик: {$client->full_name}, адрес: {$client->postal_address}");
-            $sheet->setCellValue('B11', "Р/сч: {$client->bank_account_number} в {$client->bank_postal_address} код {$client->bank_bic}, УНП:{$client->unp}");
+            $sheet->setCellValue('A10', "Р/сч: {$client->bank_account_number} в {$client->bank_postal_address} код {$client->bank_bic}");
+            $sheet->setCellValue('A11', "УНП:{$client->unp}");
+            $sheet->setCellValue('A12', "Адрес: {$client->postal_address}");
+
 
 
             $sheet->setCellValue("C16", $overallTotalAmountWithoutVat);
@@ -244,8 +246,7 @@ class CarwashInvoiceService
 
 
             // --- Прописью ---
-            $sheet->setCellValue('A19', "Сумма НДС: " . $this->convertToWords($overallVatAmount ?? 0));
-            $sheet->setCellValue('A21', "Всего к оплате на сумму с НДС: " . $this->convertToWords($overallTotalAmountWithVat));
+            $sheet->setCellValue('A19', "Всего оказано услуг  на сумму: " . $this->convertToWords($overallTotalAmountWithVat ?? 0). ", в т.ч.: НДС - ".$this->convertToWords($overallVatAmount ?? 0));
 
 
             // --- Детализация по картам ---
@@ -269,7 +270,7 @@ class CarwashInvoiceService
                 if ($cardStats->isEmpty()) continue;
 
                 // Название карты и статус
-                $sheet->setCellValue("B{$currentRow}", $card->card_number);
+                $sheet->setCellValue("B{$currentRow}", (string) $card->card_number);
                 $sheet->getStyle("B{$currentRow}")->getFont()->setBold(true);
                 $sheet->getStyle("A{$currentRow}:J{$currentRow}")->getBorders()
                     ->getAllBorders()
