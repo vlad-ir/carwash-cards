@@ -292,11 +292,12 @@ class CarwashInvoiceController extends Controller
 
         $carwashInvoice->download_url = null;
         if ($carwashInvoice->file_path) {
-            $relativePath = 'invoices/' . basename($carwashInvoice->file_path);
-            if (Storage::disk('public')->exists($relativePath)) {
-                $carwashInvoice->download_url = Storage::disk('public')->url($relativePath);
+            $publicRelativePath = str_replace('public/', '', $carwashInvoice->file_path);
+            if (Storage::disk('public')->exists($publicRelativePath)) {
+                $carwashInvoice->download_url = Storage::disk('public')->url($publicRelativePath);
             }
         }
+
         return view('carwash_invoices.show', ['invoice' => $carwashInvoice]);
     }
 
