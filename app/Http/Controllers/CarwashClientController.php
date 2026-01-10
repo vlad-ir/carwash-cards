@@ -214,7 +214,7 @@ class CarwashClientController extends Controller
         $newRate = $request->rate_per_minute;
 
         try {
-            $updatedCount = CarwashBonusCard::whereIn('carwash_client_id', $clientIds)
+            $updatedCount = CarwashBonusCard::whereIn('client_id', $clientIds)
                 ->update(['rate_per_minute' => $newRate]);
 
             return response()->json(['success' => "Тариф успешно обновлен для {$updatedCount} бонусных карт."]);
