@@ -6,6 +6,7 @@
         <div class="mb-3">
             <a href="{{ route('carwash_clients.create') }}" class="btn btn-primary">Добавить клиента</a>
             <button id="createInvoicesSelected" class="btn btn-success" disabled>Создать счета для выбранных</button>
+            <button id="setTariffSelected" class="btn btn-info" disabled>Установить тариф</button>
             <button id="deleteSelected" class="btn btn-danger" disabled>Удалить выбранные</button>
         </div>
 
@@ -72,6 +73,7 @@
 
     <x-confirm-modal />
     <x-create-invoices-modal />
+    <x-set-tariff-modal />
 
     @push('scripts')
         <script>
@@ -265,6 +267,7 @@
                                 updateSelectAllCheckboxState();
                                 $('#deleteSelected').prop('disabled', selectedIds.length === 0);
                                 $('#createInvoicesSelected').prop('disabled', selectedIds.length === 0);
+                                $('#setTariffSelected').prop('disabled', selectedIds.length === 0);
                             },
                             error: function (xhr) {
                                 console.error("Ошибка при получении всех ID клиентов:", xhr);
@@ -281,6 +284,7 @@
                         updateSelectAllCheckboxState();
                         $('#deleteSelected').prop('disabled', true);
                         $('#createInvoicesSelected').prop('disabled', true);
+                        $('#setTariffSelected').prop('disabled', true);
                     }
                 });
 
@@ -298,6 +302,7 @@
                     updateSelectAllCheckboxState();
                     $('#deleteSelected').prop('disabled', selectedIds.length === 0);
                     $('#createInvoicesSelected').prop('disabled', selectedIds.length === 0);
+                    $('#setTariffSelected').prop('disabled', selectedIds.length === 0);
                 });
 
                 $('#deleteSelected').on('click', function () {
@@ -317,6 +322,7 @@
                                 allRecordsGloballySelected = false; // Added line
                                 $('#deleteSelected').prop('disabled', true);
                                 $('#createInvoicesSelected').prop('disabled', true);
+                                $('#setTariffSelected').prop('disabled', true);
                                 table.draw();
                             },
                             error: function () {
@@ -355,6 +361,7 @@
                                 allRecordsGloballySelected = false;
                                 $('#deleteSelected').prop('disabled', true);
                                 $('#createInvoicesSelected').prop('disabled', true);
+                                $('#setTariffSelected').prop('disabled', true);
                                 table.draw(); // Обновить таблицу, чтобы сбросить выделение чекбоксов
                             },
                             error: function (xhr) {
@@ -368,6 +375,48 @@
                     });
                 });
 
+                $('#setTariffSelected').on('click', function () {
+                    if (selectedIds.length === 0) return;
+
+                    const modal = new bootstrap.Modal('#setTariffModal');
+                    $('#setTariffMessage').text(`Установить новый тариф для бонусных карт ${selectedIds.length} выбранных клиентов?`);
+                    modal.show();
+
+                    $('#confirmSetTariffButton').off('click').on('click', function() {
+                        const newTariffRate = $('#newTariffRate').val();
+                        if (!newTariffRate || newTariffRate < 0) {
+                            showToast('Ошибка', 'Пожалуйста, введите корректный тариф.', 'error');
+                            return;
+                        }
+                        modal.hide();
+
+                        $.ajax({
+                            url: "{{ route('carwash_clients.update_tariff_for_selected') }}",
+                            method: 'POST',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                ids: selectedIds,
+                                rate_per_minute: newTariffRate
+                            },
+                            success: function (response) {
+                                showToast('Успех', response.success, 'success');
+                                selectedIds = [];
+                                allRecordsGloballySelected = false;
+                                $('#deleteSelected').prop('disabled', true);
+                                $('#createInvoicesSelected').prop('disabled', true);
+                                $('#setTariffSelected').prop('disabled', true);
+                                table.draw();
+                            },
+                            error: function (xhr) {
+                                let errorMessage = 'Ошибка при установке тарифа.';
+                                if (xhr.responseJSON && xhr.responseJSON.error) {
+                                    errorMessage = xhr.responseJSON.error;
+                                }
+                                showToast('Ошибка', errorMessage, 'error');
+                            }
+                        });
+                    });
+                });
 
                 // Обработчик клика для открытия подтаблицы
                 $('#clientsTable tbody').on('click', 'td.sub-table-arr', function () {
