@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCarwashClientRequest;
+use App\Models\CarwashBonusCard;
 use App\Models\CarwashClient;
 use App\Services\CarwashInvoiceService;
 use Illuminate\Http\Request;
@@ -198,6 +199,28 @@ class CarwashClientController extends Controller
             return response()->json(['error' => "Не удалось создать счета ни для одного из {$errorCount} выбранных клиентов."], 500);
         } else {
             return response()->json(['error' => "Не выбрано клиентов для создания счетов."], 400);
+        }
+    }
+
+    public function updateTariffForSelected(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:carwash_clients,id',
+            'rate_per_minute' => 'required|numeric|min:0',
+        ]);
+
+        $clientIds = $request->ids;
+        $newRate = $request->rate_per_minute;
+
+        try {
+            $updatedCount = CarwashBonusCard::whereIn('carwash_client_id', $clientIds)
+                ->update(['rate_per_minute' => $newRate]);
+
+            return response()->json(['success' => "Тариф успешно обновлен для {$updatedCount} бонусных карт."]);
+        } catch (\Exception $e) {
+            Log::error("Error updating tariff for selected clients: " . $e->getMessage());
+            return response()->json(['error' => 'Произошла ошибка при обновлении тарифа.'], 500);
         }
     }
 }
