@@ -96,7 +96,7 @@ class CarwashInvoiceController extends Controller
      */
     public function getInvoicesData(Request $request): JsonResponse
     {
-        $query = CarwashInvoice::with('client:id,short_name')->select('carwash_invoices.*'); // Select all from invoices table
+        $query = CarwashInvoice::with('client:id,short_name,email,invoice_email_required')->select('carwash_invoices.*'); // Select all from invoices table
 
         $query = $this->applyInvoiceFilters($query, $request);
 
@@ -139,15 +139,16 @@ class CarwashInvoiceController extends Controller
                         $canSendEmail = true;
                     }
                 }
+                $client = $invoice->client;
+                $shouldSendEmail = $client && $canSendEmail && $client->invoice_email_required && !empty($client->email);
 
-                if (!$invoice->sent_to_email_at && $invoice->client && $invoice->client->email && $canSendEmail) {
+                if ($shouldSendEmail) {
                     $buttons .= '<button type="button" class="btn btn-sm btn-outline-success send-email-btn ms-1" data-invoice-id="' . $invoice->id . '" title="Отправить на email"><i class="fas fa-envelope"></i></button>';
-                } elseif (!($invoice->client && $invoice->client->email)) {
-                    $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="У клиента не указан email для отправки" disabled><i class="fas fa-envelope"></i></button>';
-                } elseif (!$canSendEmail) {
-                    $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Файл счета отсутствует или недоступен" disabled><i class="fas fa-envelope"></i></button>';
+                } else {
+                    $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Нельзя отправить счет" disabled><i class="fas fa-envelope"></i></button>';
                 }
 
+                // Кнопка "Удалить счет"
                 $buttons .= '<form action="' . route('carwash_invoices.destroy', $invoice->id) . '" method="POST" style="display:inline;" class="delete-form ms-1">
                             ' . csrf_field() . '
                             ' . method_field('DELETE') . '
