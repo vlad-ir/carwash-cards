@@ -96,7 +96,7 @@ class CarwashInvoiceController extends Controller
      */
     public function getInvoicesData(Request $request): JsonResponse
     {
-        $query = CarwashInvoice::with('client:id,short_name')->select('carwash_invoices.*'); // Select all from invoices table
+        $query = CarwashInvoice::with('client:id,short_name,email,invoice_email_required')->select('carwash_invoices.*'); // Select all from invoices table
 
         $query = $this->applyInvoiceFilters($query, $request);
 
