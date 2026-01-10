@@ -163,7 +163,6 @@ class CarwashInvoiceController extends Controller
             ->make(true);
     }
 
-    // Метод downloadInvoice больше не нужен, так как файлы доступны по публичной ссылке
 
     public function reissue(Request $request, CarwashInvoice $invoice): JsonResponse
     {
@@ -238,19 +237,6 @@ class CarwashInvoiceController extends Controller
         $query = $this->applyInvoiceFilters($query, $request);
         $ids = $query->pluck('id')->toArray();
         return response()->json(['ids' => $ids]);
-    }
-
-    /**
-     * Show the form for creating a new invoice (manual creation).
-     *
-     * @return \Illuminate\View\View
-     */
-    public function create(): View
-    {
-        $clients = CarwashClient::where('status', 'active')
-            ->where('invoice_email_required', true)
-            ->get();
-        return view('carwash_invoices.create', compact('clients'));
     }
 
     /**

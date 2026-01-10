@@ -57,7 +57,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/carwash_invoices/get_all_ids', [CarwashInvoiceController::class, 'getAllInvoiceIds'])->name('carwash_invoices.get_all_ids');
         Route::post('/carwash_invoices/{invoice}/reissue', [CarwashInvoiceController::class, 'reissue'])->name('carwash_invoices.reissue');
         Route::post('/carwash_invoices/{invoice}/send_email_manually', [CarwashInvoiceController::class, 'sendEmailManually'])->name('carwash_invoices.send_email_manually');
-        Route::resource('carwash_invoices', CarwashInvoiceController::class)->except(['edit', 'update']);
+        Route::resource('carwash_invoices', CarwashInvoiceController::class)->except(['edit', 'update', 'create']);
     });
 
     // Маршруты для бухгалтера
