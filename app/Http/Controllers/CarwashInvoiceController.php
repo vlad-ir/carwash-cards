@@ -140,10 +140,15 @@ class CarwashInvoiceController extends Controller
                     }
                 }
 
-                if (!$invoice->sent_to_email_at && $invoice->client && $invoice->client->email && $canSendEmail) {
+                $client = $invoice->client;
+                $shouldSendEmail = $client && $client->invoice_email_required && !empty($client->email);
+
+                if (!$invoice->sent_to_email_at && $shouldSendEmail && $canSendEmail) {
                     $buttons .= '<button type="button" class="btn btn-sm btn-outline-success send-email-btn ms-1" data-invoice-id="' . $invoice->id . '" title="Отправить на email"><i class="fas fa-envelope"></i></button>';
-                } elseif (!($invoice->client && $invoice->client->email)) {
+                } elseif (!($client && !empty($client->email))) {
                     $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="У клиента не указан email для отправки" disabled><i class="fas fa-envelope"></i></button>';
+                } elseif ($client && !$client->invoice_email_required) {
+                    $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="У клиента отключена отправка счетов на email" disabled><i class="fas fa-envelope"></i></button>';
                 } elseif (!$canSendEmail) {
                     $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Файл счета отсутствует или недоступен" disabled><i class="fas fa-envelope"></i></button>';
                 }
