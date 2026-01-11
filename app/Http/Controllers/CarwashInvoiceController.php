@@ -6,6 +6,7 @@ use App\Models\CarwashClient;
 use App\Models\CarwashInvoice;
 use App\Services\CarwashInvoiceService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
