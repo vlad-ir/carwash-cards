@@ -14,6 +14,12 @@ class Kernel extends ConsoleKernel
 
     protected function schedule(Schedule $schedule)
     {
+        // Используем exec с полным путем к PHP, так как 'php' может быть недоступен в системном PATH для cron.
+        // Это гарантирует, что обработчик очереди запускается корректно.
+        $schedule->exec('/opt/alt/php82/usr/bin/php ' . base_path('artisan') . ' queue:work --stop-when-empty')
+            ->everyMinute()
+            ->withoutOverlapping();
+
         $schedule->command('carwash:csv-import-stats')->dailyAt('01:00');
         $schedule->command('carwash:invoices-generate')->dailyAt('03:00');
     }
