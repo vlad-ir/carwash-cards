@@ -14,7 +14,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\File; // Added this line
 
-class CarwashInvoiceMail extends Mailable
+class CarwashInvoiceMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
