@@ -56,7 +56,7 @@ class CarwashInvoiceMail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         return new Content(
-            view: 'emails.carwash_invoice', // Blade view for the email body
+            view: 'carwash_emails.invoice', // Blade view for the email body
         );
     }
 

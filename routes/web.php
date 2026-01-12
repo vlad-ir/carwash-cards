@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CarwashClientController;
 use App\Http\Controllers\CarwashBonusCardController;
@@ -9,6 +10,8 @@ use App\Http\Controllers\CarwashBonusCardStatController;
 use App\Http\Controllers\CarwashInvoiceController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\CheckRole;
+use Illuminate\Support\Facades\Artisan;
+
 
 // Дашборд
 Route::get('/', function () {
@@ -17,6 +20,14 @@ Route::get('/', function () {
     }
     return view('auth.login');
 });
+
+
+/*Route::get('/clear-cache-temp', function() {
+    Artisan::call('config:clear');
+    Artisan::call('config:cache');
+    return "Configuration cache cleared and rebuilt!";
+});*/
+
 
 Route::middleware(['auth'])->group(function () {
     // Дашборд

@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
 
     protected function schedule(Schedule $schedule)
     {
+        $schedule->command('queue:work --stop-when-empty')->everyMinute()->withoutOverlapping();
         $schedule->command('carwash:csv-import-stats')->dailyAt('01:00');
         $schedule->command('carwash:invoices-generate')->dailyAt('03:00');
     }
