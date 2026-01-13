@@ -13,7 +13,7 @@ class CarwashBonusCardController extends Controller
 {
     public function index(Request $request)
     {
-        $clients = CarwashClient::where('status', 'active')->get();
+        $clients = CarwashClient::where('status', 'active')->orderby('short_name')->get();
         $bonus_cards = CarwashBonusCard::with('client')->get();
         return view('carwash_bonus_cards.index', compact('clients', 'bonus_cards'));
     }
