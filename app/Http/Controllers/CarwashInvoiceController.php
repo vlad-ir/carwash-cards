@@ -6,7 +6,6 @@ use App\Models\CarwashClient;
 use App\Models\CarwashInvoice;
 use App\Services\CarwashInvoiceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
@@ -97,7 +96,7 @@ class CarwashInvoiceController extends Controller
      */
     public function getInvoicesData(Request $request): JsonResponse
     {
-        $query = CarwashInvoice::with('client:id,short_name,email,invoice_email_required')->select('carwash_invoices.*'); // Select all from invoices table
+        $query = CarwashInvoice::with('client:id,short_name')->select('carwash_invoices.*'); // Select all from invoices table
 
         $query = $this->applyInvoiceFilters($query, $request);
 
@@ -141,15 +140,10 @@ class CarwashInvoiceController extends Controller
                     }
                 }
 
-                $client = $invoice->client;
-                $shouldSendEmail = $client && $client->invoice_email_required && !empty($client->email);
-
-                if (!$invoice->sent_to_email_at && $shouldSendEmail && $canSendEmail) {
+                if (!$invoice->sent_to_email_at && $invoice->client && $invoice->client->email && $canSendEmail) {
                     $buttons .= '<button type="button" class="btn btn-sm btn-outline-success send-email-btn ms-1" data-invoice-id="' . $invoice->id . '" title="Отправить на email"><i class="fas fa-envelope"></i></button>';
-                } elseif (!($client && !empty($client->email))) {
+                } elseif (!($invoice->client && $invoice->client->email)) {
                     $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="У клиента не указан email для отправки" disabled><i class="fas fa-envelope"></i></button>';
-                } elseif ($client && !$client->invoice_email_required) {
-                    $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="У клиента отключена отправка счетов на email" disabled><i class="fas fa-envelope"></i></button>';
                 } elseif (!$canSendEmail) {
                     $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Файл счета отсутствует или недоступен" disabled><i class="fas fa-envelope"></i></button>';
                 }

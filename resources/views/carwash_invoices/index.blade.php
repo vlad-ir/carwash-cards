@@ -60,9 +60,6 @@
         </table>
     </div>
 
-    <x-reissue-invoice-modal />
-    <x-send-email-modal />
-
     @push('scripts')
         <script>
             $(document).ready(function () {
@@ -140,16 +137,10 @@
 
                         invoicesTable.on('click', '.reissue-invoice-btn', function() {
                             const invoiceId = $(this).data('invoice-id');
-                            const reissueUrl = '{{ route('carwash_invoices.reissue', ':invoiceId') }}'.replace(':invoiceId', invoiceId);
-
-                            const modal = new bootstrap.Modal('#reissueInvoiceModal');
-                            $('#reissueInvoiceMessage').text(`Вы уверены, что хотите перевыставить счет #${invoiceId}? Это действие заменит существующий счет.`);
-                            modal.show();
-
-                            $('#confirmReissueButton').off('click').on('click', function() {
-                                modal.hide();
+                            const reissue_url = '{{ route('carwash_invoices.reissue', ':invoiceId') }}'.replace(':invoiceId', invoiceId);
+                            showConfirmModal(`Вы уверены, что хотите перевыставить счет #${invoiceId}? Это действие заменит существующий счет.`, function () {
                                 $.ajax({
-                                    url: reissueUrl,
+                                    url: reissue_url,
                                     method: 'POST',
                                     data: { _token: "{{ csrf_token() }}" },
                                     success: function(response) {
@@ -165,16 +156,11 @@
 
                         invoicesTable.on('click', '.send-email-btn', function() {
                             const invoiceId = $(this).data('invoice-id');
-                            const mailUrl = '{{ route('carwash_invoices.send_email_manually', ':invoiceId') }}'.replace(':invoiceId', invoiceId);
-
-                            const modal = new bootstrap.Modal('#sendEmailModal');
-                            $('#sendEmailMessage').text(`Вы уверены, что хотите отправить счет #${invoiceId} на email клиенту?`);
-                            modal.show();
-
-                            $('#confirmSendEmailButton').off('click').on('click', function() {
-                                modal.hide();
+                            // URL для запроса
+                            const mail_url = '{{ route('carwash_invoices.send_email_manually', ':invoiceId') }}'.replace(':invoiceId', invoiceId);
+                            showConfirmModal(`Вы уверены, что хотите отправить счет #${invoiceId} на email клиенту?`, function () {
                                 $.ajax({
-                                    url: mailUrl,
+                                    url: mail_url,
                                     method: 'POST',
                                     data: { _token: "{{ csrf_token() }}" },
                                     success: function(response) {
