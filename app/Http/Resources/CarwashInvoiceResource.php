@@ -14,17 +14,17 @@ class CarwashInvoiceResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $vatRatePercent = (float) config('billing.vat_rate', 20);
-        $vatRate = $vatRatePercent / 100;
+        $vatRate = (float) config('invoice.vat_percentage', 0.20);
+        $calculateVat = config('invoice.calculate_vat', true);
 
         $amount = (float) $this->amount;
-        $vatAmount = round($amount * $vatRate, 2);
+        $vatAmount = $calculateVat ? round($amount * $vatRate, 2) : 0.0;
         $totalAmount = $amount + $vatAmount;
 
         return [
             'invoice_date' => $this->created_at->toDateString(),
             'amount' => $amount,
-            'vat_rate' => $vatRatePercent,
+            'vat_rate' => $vatRate * 100,
             'vat_amount' => $vatAmount,
             'total_amount' => $totalAmount,
             'period_start' => $this->period_start->toDateString(),
