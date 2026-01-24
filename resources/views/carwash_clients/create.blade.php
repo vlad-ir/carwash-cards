@@ -134,7 +134,7 @@
                         <label for="invoice_email_day" class="form-label">День отправки счета</label>
                         <input type="number" name="invoice_email_day" id="invoice_email_day"
                                class="form-control @error('invoice_email_day') is-invalid @enderror"
-                               value="{{ old('invoice_email_day', 5) }}" min="1" max="31">
+                               value="{{ old('invoice_email_day', 3) }}" min="1" max="31">
                         @error('invoice_email_day')
                         <div class="invalid-feedback">{{ $message }}</div>
                         @enderror

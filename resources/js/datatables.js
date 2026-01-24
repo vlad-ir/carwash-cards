@@ -1,7 +1,7 @@
 $(document).ready(function() {
     $.extend(true, $.fn.dataTable.defaults, {
         language: {
-            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/ru-RU.json',
+            url: './js/datatables_ru.json',
             paginate: {
                 previous: "Предыдущая",
                 next: "Следующая"
