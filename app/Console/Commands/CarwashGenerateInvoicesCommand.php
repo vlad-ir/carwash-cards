@@ -78,10 +78,14 @@ class CarwashGenerateInvoicesCommand extends Command
                 // $periodDateForService is the date based on which createAndSendInvoiceForClient determines "previous month"
                 // If command runs on July 5th, it should generate invoice for June.
                 // So, $currentDate (July 5th) is correct to pass to the service.
-                $periodDateForService = $currentDate->copy();
 
+/*                $periodDateForService = $currentDate->copy();
                 $previousMonthStart = $periodDateForService->copy()->subMonthNoOverflow()->startOfMonth();
-                $previousMonthEnd = $periodDateForService->copy()->subMonthNoOverflow()->endOfMonth();
+                $previousMonthEnd = $periodDateForService->copy()->subMonthNoOverflow()->endOfMonth();*/
+
+                $previousMonthStart = $currentDate->copy()->subMonthNoOverflow()->startOfMonth();
+                $previousMonthEnd = $currentDate->copy()->subMonthNoOverflow()->endOfMonth();
+
 
                 // Check if an invoice already exists for this client and the previous month
                 $existingInvoice = CarwashInvoice::where('client_id', $client->id)
@@ -99,7 +103,13 @@ class CarwashGenerateInvoicesCommand extends Command
                 $this->line("Processing client ID: {$client->id} ({$client->short_name}) for invoice generation.");
 
                 try {
-                    $success = $this->invoiceService->createAndSendInvoiceForClient($client, $periodDateForService);
+                    // Передаем месяц и год предыдущего месяца как целые числа
+                    $success = $this->invoiceService->createAndSendInvoiceForClient(
+                        $client,
+                        $previousMonthStart->month,  // int (1-12)
+                        $previousMonthStart->year     // int (например, 2026)
+                    );
+
                     if ($success) {
                         Log::info("CarwashGenerateInvoicesCommand: Successfully generated and sent invoice for client ID: {$client->id}.");
                         $this->info("Successfully processed client ID: {$client->id}.");
