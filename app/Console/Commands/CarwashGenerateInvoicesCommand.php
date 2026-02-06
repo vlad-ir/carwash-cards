@@ -79,10 +79,6 @@ class CarwashGenerateInvoicesCommand extends Command
                 // If command runs on July 5th, it should generate invoice for June.
                 // So, $currentDate (July 5th) is correct to pass to the service.
 
-/*                $periodDateForService = $currentDate->copy();
-                $previousMonthStart = $periodDateForService->copy()->subMonthNoOverflow()->startOfMonth();
-                $previousMonthEnd = $periodDateForService->copy()->subMonthNoOverflow()->endOfMonth();*/
-
                 $previousMonthStart = $currentDate->copy()->subMonthNoOverflow()->startOfMonth();
                 $previousMonthEnd = $currentDate->copy()->subMonthNoOverflow()->endOfMonth();
 

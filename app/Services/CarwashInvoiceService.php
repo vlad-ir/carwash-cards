@@ -160,6 +160,7 @@ class CarwashInvoiceService
 
         foreach ($activeCards as $card) {
             $usage = CarwashBonusCardStat::where('card_id', $card->id)
+                ->where('duration_seconds', '>', 0)
                 ->whereBetween('start_time', [$start, $end])
                 ->get();
 
@@ -263,7 +264,11 @@ class CarwashInvoiceService
             foreach ($client->bonusCards->where('status', 'active') as $card) {
 
                 $cardStats = CarwashBonusCardStat::where('card_id', $card->id)
-                    ->whereBetween('start_time', [$periodStart, $periodEnd])
+                    ->whereBetween('start_time', [
+                        Carbon::parse($periodStart)->startOfDay(),
+                        Carbon::parse($periodEnd)->endOfDay()
+                    ])
+                    ->where('duration_seconds', '>', 0)
                     ->orderBy('start_time')
                     ->get();
 
