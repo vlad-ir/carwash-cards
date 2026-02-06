@@ -275,7 +275,7 @@ class CarwashInvoiceService
                 if ($cardStats->isEmpty()) continue;
 
                 // Название карты и статус
-                $sheet->setCellValue("B{$currentRow}", (string) $card->card_number);
+                $sheet->setCellValue("B{$currentRow}", (string) "{$card->name} ({$card->card_number})");
                 $sheet->getStyle("B{$currentRow}")->getFont()->setBold(true);
                 $sheet->getStyle("A{$currentRow}:I{$currentRow}")->getBorders()
                     ->getAllBorders()
