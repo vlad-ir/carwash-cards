@@ -226,15 +226,19 @@ class CarwashInvoiceService
             $sheet = $spreadsheet->getActiveSheet();
             $currentDate = Carbon::now();
 
+            // Период
+            $parsedPeriodStart = Carbon::parse($periodStart)->format('d.m.Y');
+            $parsedPeriodEnd = Carbon::parse($periodEnd)->format('d.m.Y');
+            $sheet->setCellValue('A36', "Период с {$parsedPeriodStart} по {$parsedPeriodEnd}");
+
             // --- Populate Client and Invoice Data (Header) ---
-            $sheet->setCellValue('A6', "АКТ № AM-{$nextInvoiceNumber} от {$currentDate->format('d.m.Y')} г.");
+            $sheet->setCellValue('A6', "АКТ № AM-{$nextInvoiceNumber} от {$parsedPeriodEnd} г.");
             $sheet->setCellValue('A8', (string) $client->contract);
             $sheet->setCellValue('A9', "Заказчик: ".$client->full_name);
             $sheet->setCellValue('C25', (string) $client->full_name);
             $sheet->setCellValue('A10', "Р/сч: {$client->bank_account_number} в {$client->bank_postal_address} код {$client->bank_bic}");
             $sheet->setCellValue('A11', "УНП:{$client->unp}");
             $sheet->setCellValue('A12', "Адрес: {$client->postal_address}");
-
 
 
             $sheet->setCellValue("C16", $overallTotalAmountWithoutVat);
@@ -245,7 +249,6 @@ class CarwashInvoiceService
             $sheet->setCellValue("F16", $overallTotalAmountWithVat);
             $sheet->setCellValue("F17", $overallTotalAmountWithVat);
 
-
             // --- Прописью ---
             $sheet->setCellValue('A19', "Всего оказано услуг  на сумму: " . $this->convertToWords($overallTotalAmountWithVat ?? 0). ", в т.ч.: НДС - ".$this->convertToWords($overallVatAmount ?? 0));
 
@@ -253,12 +256,6 @@ class CarwashInvoiceService
             // --- Детализация по картам ---
             $startRow = 39; // Первая строка с данными
             $currentRow = $startRow;
-
-            // Период
-            $parsedPeriodStart = Carbon::parse($periodStart)->format('d.m.Y');
-            $parsedPeriodEnd = Carbon::parse($periodEnd)->format('d.m.Y');
-            $sheet->setCellValue('A36', "Период с {$parsedPeriodStart} по {$parsedPeriodEnd}");
-
             $globalCounter = 1;
 
             foreach ($client->bonusCards->where('status', 'active') as $card) {
@@ -296,7 +293,7 @@ class CarwashInvoiceService
                     $totalWithVat = $amountForCard + $vatSum;
 
                     $sheet->setCellValue("A{$currentRow}", $globalCounter++);
-                    $sheet->setCellValue("C{$currentRow}", \Carbon\Carbon::parse($stat->start_time)->format('d.m.Y H:i'));
+                    $sheet->setCellValue("C{$currentRow}", Carbon::parse($stat->start_time)->format('d.m.Y H:i'));
                     $sheet->setCellValue("D{$currentRow}", $durationSeconds);
                     //$sheet->setCellValue("E{$currentRow}", $remainingBalanceSeconds);
                     $sheet->setCellValue("E{$currentRow}", $ratePerMinute);
