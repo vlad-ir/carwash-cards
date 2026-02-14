@@ -28,8 +28,9 @@ class InvoiceController extends Controller
         }
 
         $invoices = CarwashInvoice::with('client')
-            ->whereDate('created_at', '>=', $request->start_date)
-            ->whereDate('created_at', '<=', $request->end_date)
+            ->whereDate('period_start', '>=', $request->start_date)
+            ->whereDate('period_end', '<=', $request->end_date)
+            ->where('amount', '>', 0)
             ->get();
 
         return CarwashInvoiceResource::collection($invoices);
