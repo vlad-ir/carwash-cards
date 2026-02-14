@@ -27,7 +27,7 @@ class CarwashClient extends Model
     ];
 
     protected $attributes = [
-        'invoice_email_day' => 5,
+        'invoice_email_day' => 3,
         'status' => 'active',
         'invoice_email_required' => true,
     ];

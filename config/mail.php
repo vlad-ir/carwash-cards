@@ -16,6 +16,9 @@ return [
 
     'default' => env('MAIL_MAILER', 'log'),
 
+    'send_mail_duplicate_buh' => env('SEND_MAIL_DUPLICATE_BUH', true),
+    'mail_duplicate_address' => env('MAIL_DUPLICATE_ADDRESS', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations
