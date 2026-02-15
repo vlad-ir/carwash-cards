@@ -17,9 +17,9 @@ class CarwashInvoiceResource extends JsonResource
         $vatRate = (float) config('invoice.vat_percentage', 0.20);
         $calculateVat = config('invoice.calculate_vat', true);
 
-        $amount = (float) $this->amount;
-        $vatAmount = $calculateVat ? round($amount * $vatRate, 2) : 0.0;
-        $totalAmount = $amount + $vatAmount;
+        $totalAmount = (float) $this->amount;
+        $amount = $calculateVat ? round($totalAmount / (1+$vatRate), 2) : 0.0;
+        $vatAmount = $calculateVat ? round($totalAmount - $amount, 2) : 0.0;
 
         return [
             'invoice_date' => $this->created_at->toDateString(),
