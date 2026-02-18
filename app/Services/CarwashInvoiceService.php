@@ -117,8 +117,8 @@ class CarwashInvoiceService
 
             DB::commit();
 
-            // Send duplicate to chief accountant if enabled and amount > 0
-            if ($invoice->amount > 0 && config('mail.send_mail_duplicate_buh', true)) {
+            // Send duplicate to chief accountant if enabled and amount > 0 and send requested
+            if ($invoice->amount > 0 && config('mail.send_mail_duplicate_buh', true) && $sendEmail) {
                 $this->sendDuplicateToAccountant($client, $invoice, $xlsRelativePath);
             }
 
@@ -140,18 +140,18 @@ class CarwashInvoiceService
      * @param string $xlsRelativePath
      * @return void
      */
-    private function sendInvoiceToClient(CarwashClient $client, CarwashInvoice $invoice, string $xlsRelativePath): void
+    public function sendInvoiceToClient(CarwashClient $client, CarwashInvoice $invoice, string $xlsRelativePath): bool
     {
         if (empty($client->email)) {
             Log::warning("Client ID {$client->id} has no email address. Invoice not sent via email.");
-            return;
+            return false;
         }
 
         $absolutePathToAttach = Storage::disk('public')->path(str_replace('public/', '', $xlsRelativePath));
 
         if (!File::exists($absolutePathToAttach)) {
             Log::error("Invoice file not found at {$absolutePathToAttach} for client ID {$client->id}. Email not sent.");
-            return;
+            return false;
         }
 
         try {
@@ -159,8 +159,10 @@ class CarwashInvoiceService
             $invoice->sent_to_email_at = now();
             $invoice->save();
             Log::info("Invoice successfully emailed to client ID: {$client->id}");
+            return true;
         } catch (Exception $e) {
             Log::error("Failed to send invoice email to client ID {$client->id}: {$e->getMessage()}");
+            return false;
         }
     }
 
@@ -172,26 +174,28 @@ class CarwashInvoiceService
      * @param string $xlsRelativePath
      * @return void
      */
-    private function sendDuplicateToAccountant(CarwashClient $client, CarwashInvoice $invoice, string $xlsRelativePath): void
+    public function sendDuplicateToAccountant(CarwashClient $client, CarwashInvoice $invoice, string $xlsRelativePath): bool
     {
         $accountantEmail = config('mail.mail_duplicate_address', '');
         if (empty($accountantEmail)) {
             Log::warning("Accountant email is not configured. Duplicate invoice not sent.");
-            return;
+            return false;
         }
 
         $absolutePathToAttach = Storage::disk('public')->path(str_replace('public/', '', $xlsRelativePath));
 
         if (!File::exists($absolutePathToAttach)) {
             Log::error("Invoice file not found at {$absolutePathToAttach} for duplicate email. Cannot send to accountant.");
-            return;
+            return false;
         }
 
         try {
             Mail::to($accountantEmail)->send(new CarwashInvoiceDuplicateMail($client, $invoice, $absolutePathToAttach));
             Log::info("Duplicate invoice sent to chief accountant for client ID: {$client->id}");
+            return true;
         } catch (Exception $e) {
             Log::error("Failed to send duplicate invoice email to chief accountant for client ID {$client->id}: {$e->getMessage()}");
+            return false;
         }
     }
 

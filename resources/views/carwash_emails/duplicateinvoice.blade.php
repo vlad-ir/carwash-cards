@@ -11,7 +11,7 @@
 для клиента {{ $client->full_name }}, УНП: {{ $client->unp }}
 </p>
 
-<p>Номер счета: {{ $invoice->id }}</p>
+<p>Номер счета: AM-{{ $invoice->id }}</p>
 <p>Сумма к оплате: {{ number_format($invoice->amount, 2, ',', ' ') }} руб.</p>
 <br>
 

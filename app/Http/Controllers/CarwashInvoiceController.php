@@ -179,8 +179,8 @@ class CarwashInvoiceController extends Controller
             $month = $periodStart->month;
             $year = $periodStart->year;
 
-            // Передаем true для sendEmail по умолчанию при перевыставлении
-            $success = $this->invoiceService->createAndSendInvoiceForClient($client, $month, $year, true);
+            // Передаем false для sendEmail по умолчанию при перевыставлении (не отправляем email)
+            $success = $this->invoiceService->createAndSendInvoiceForClient($client, $month, $year, false);
 
             if ($success) {
                 return response()->json(['success' => 'Счет #' . $invoice->id . ' успешно перевыставлен и отправлен.']);
@@ -209,23 +209,24 @@ class CarwashInvoiceController extends Controller
             return response()->json(['error' => 'Путь к файлу счета не указан.'], 400);
         }
 
+        // Проверка наличия файла (можно оставить для раннего ответа)
         $publicRelativePath = str_replace('public/', '', $invoice->file_path);
         if (!Storage::disk('public')->exists($publicRelativePath)) {
-            return response()->json(['error' => 'Файл счета не найден на диске public. Возможно, его нужно сначала сформировать/перевыставить.'], 400);
+            return response()->json(['error' => 'Файл счета не найден на диске public.'], 400);
         }
 
-        try {
-            $absolutePathToAttach = Storage::disk('public')->path($publicRelativePath);
-            Mail::to($client->email)->send(new \App\Mail\CarwashInvoiceMail($client, $invoice, $absolutePathToAttach));
-
-            $invoice->sent_to_email_at = now();
-            $invoice->save();
-
-            return response()->json(['success' => 'Счет #' . $invoice->id . ' успешно отправлен на email: ' . $client->email]);
-        } catch (\Exception $e) {
-            Log::error("Error sending invoice #{$invoice->id} manually: " . $e->getMessage(), ['exception' => $e]);
-            return response()->json(['error' => 'Ошибка при отправке email.'], 500);
+        // Отправка клиенту с помощью сервиса
+        $sent = $this->invoiceService->sendInvoiceToClient($client, $invoice, $invoice->file_path);
+        if (!$sent) {
+            return response()->json(['error' => 'Не удалось отправить счет на email клиента. Проверьте логи.'], 500);
         }
+
+        // Отправка дубликата бухгалтеру, если включено в конфигурации
+        if (config('mail.send_mail_duplicate_buh', true)) {
+            $this->invoiceService->sendDuplicateToAccountant($client, $invoice, $invoice->file_path);
+        }
+
+        return response()->json(['success' => 'Счет #' . $invoice->id . ' успешно отправлен на email: ' . $client->email]);
     }
 
     /**
