@@ -23,6 +23,7 @@ class CarwashInvoiceResource extends JsonResource
 
         return [
             'invoice_date' => $this->created_at->toDateString(),
+            'invoice_number' => 'АМ-'.$this->id,
             'amount' => $amount,
             'vat_rate' => $vatRate * 100,
             'vat_amount' => $vatAmount,
