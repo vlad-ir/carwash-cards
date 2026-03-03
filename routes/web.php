@@ -24,10 +24,17 @@ Route::get('/', function () {
 
 /*Route::get('/clear-cache-temp', function() {
     Artisan::call('config:clear');
+    Artisan::call('cache:clear');
+    Artisan::call('route:clear');
+    Artisan::call('view:clear');
     Artisan::call('config:cache');
+    Artisan::call('queue:restart');
     return "Configuration cache cleared and rebuilt!";
 });*/
 
+
+// Перезапуск очереди, чтобы подхватились новые настройки
+Artisan::call('queue:restart');
 
 Route::middleware(['auth'])->group(function () {
     // Дашборд

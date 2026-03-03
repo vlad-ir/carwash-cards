@@ -19,6 +19,8 @@ return [
     'send_mail_duplicate_buh' => env('SEND_MAIL_DUPLICATE_BUH', true),
     'mail_duplicate_address' => env('MAIL_DUPLICATE_ADDRESS', ''),
 
+    'invoice_email_limit_per_hour' => env('MAIL_INVOICE_EMAIL_LIMIT_PER_HOUR', 30),
+
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations
