@@ -13,6 +13,8 @@ use App\Http\Middleware\CheckRole;
 use Illuminate\Support\Facades\Artisan;
 
 
+
+
 // Дашборд
 Route::get('/', function () {
     if (auth()->check()) {
@@ -33,8 +35,7 @@ Route::get('/', function () {
 });*/
 
 
-// Перезапуск очереди, чтобы подхватились новые настройки
-Artisan::call('queue:restart');
+
 
 Route::middleware(['auth'])->group(function () {
     // Дашборд

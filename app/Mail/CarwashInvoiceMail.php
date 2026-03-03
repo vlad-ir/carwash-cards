@@ -34,6 +34,7 @@ class CarwashInvoiceMail extends Mailable implements ShouldQueue
         $this->client = $client;
         $this->invoice = $invoice;
         $this->attachmentPath = $attachmentPath;
+        $this->onQueue('emails');
     }
 
     /**
