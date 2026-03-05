@@ -10,6 +10,7 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         \App\Console\Commands\CarwashCsvImportStatsCommand::class,
         \App\Console\Commands\CarwashGenerateInvoicesCommand::class,
+        \App\Console\Commands\CheckStuckEmailsCommand::class,
     ];
 
     protected function schedule(Schedule $schedule)
@@ -28,6 +29,15 @@ class Kernel extends ConsoleKernel
         $schedule->command('carwash:invoices-generate')
             ->cron('0 9,12 * * 1-5')
             ->withoutOverlapping();
+
+        // Проверка каждые 6 часов зависших писем
+        $schedule->command('emails:check-stuck')
+            ->everySixHours()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Или ежедневно в 12:00
+        // $schedule->command('emails:check-stuck')->dailyAt('12:00');
     }
 
     protected function commands()
