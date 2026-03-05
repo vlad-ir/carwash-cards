@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Writer\Xls;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\File;
@@ -294,7 +295,6 @@ class CarwashInvoiceService
         int $overallVatRate,
         int $nextInvoiceNumber
     ): string {
-        // ... ваш существующий код без изменений (слишком длинный) ...
         $templatePath = storage_path('app/public/invoice_template/invoice.xls');
         if (!File::exists($templatePath)) {
             Log::error("Invoice template not found at: {$templatePath}");
@@ -313,16 +313,42 @@ class CarwashInvoiceService
             $sheet->setCellValue('A8', (string) $client->contract);
             $sheet->setCellValue('A9', "Заказчик: " . $client->full_name);
             $sheet->setCellValue('C25', (string) $client->full_name);
-            $sheet->setCellValue('A10', "Р/сч: {$client->bank_account_number} в {$client->bank_postal_address} код {$client->bank_bic}");
+
+            $cellAddress = 'A10';
+            $text = "Р/сч: {$client->bank_account_number} в {$client->bank_postal_address} код {$client->bank_bic}";
+            $sheet->setCellValue($cellAddress, $text);
+
+            // Включаем перенос текста (на случай, если потребуется для других ячеек)
+            $sheet->getStyle($cellAddress)->getAlignment()->setWrapText(true);
+
+            // Номер строки
+            $row = Coordinate::coordinateFromString($cellAddress)[1];
+
+            // Эталонная длина
+            $referenceLength = 90;
+
+            // Сравниваем длины (используем mb_strlen для корректного учёта UTF-8)
+            if (mb_strlen($text) > $referenceLength) {
+                // Текст длиннее эталонного – устанавливаем двойную высоту (30)
+                $sheet->getRowDimension($row)->setRowHeight(30);
+            } else {
+                // Текст короче или равен – пусть высота подбирается автоматически
+                $sheet->getRowDimension($row)->setRowHeight(-1);
+            }
+
+
             $sheet->setCellValue('A11', "УНП:{$client->unp}");
             $sheet->setCellValue('A12', "Адрес: {$client->postal_address}");
-            $sheet->setCellValue("C16", $overallTotalAmountWithoutVat);
-            $sheet->setCellValue("D16", $overallVatRate);
-            $sheet->setCellValue("C17", $overallTotalAmountWithoutVat);
-            $sheet->setCellValue("E16", $overallVatAmount ?? 0);
-            $sheet->setCellValue("E17", $overallVatAmount ?? 0);
-            $sheet->setCellValue("F16", $overallTotalAmountWithVat);
-            $sheet->setCellValue("F17", $overallTotalAmountWithVat);
+
+            $sheet->setCellValue("D16", $overallTotalAmountWithoutVat);
+            $sheet->setCellValue("E16", $overallVatRate);
+            $sheet->setCellValue("F16", $overallVatAmount ?? 0);
+            $sheet->setCellValue("G16", $overallTotalAmountWithVat);
+
+            $sheet->setCellValue("D17", $overallTotalAmountWithoutVat);
+            $sheet->setCellValue("F17", $overallVatAmount ?? 0);
+            $sheet->setCellValue("G17", $overallTotalAmountWithVat);
+
             $sheet->setCellValue('A19', "Всего оказано услуг на сумму: " . $this->convertToWords($overallTotalAmountWithVat ?? 0) . ", в т.ч.: НДС - " . $this->convertToWords($overallVatAmount ?? 0));
 
             // Detailed rows
@@ -330,6 +356,9 @@ class CarwashInvoiceService
             $currentRow = $startRow;
             $globalCounter = 1;
             $grouped = $detailedStats->groupBy('card_id');
+
+            // Считаем общую сумму потраченных на мойку секунд
+            $sum_duration_seconds = 0;
 
             foreach ($grouped as $cardId => $sessions) {
                 $card = $sessions->first()->card;
@@ -343,6 +372,8 @@ class CarwashInvoiceService
                     $sheet->setCellValue("A{$currentRow}", $globalCounter++);
                     $sheet->setCellValue("C{$currentRow}", Carbon::parse($stat->start_time)->format('d.m.Y H:i'));
                     $sheet->setCellValue("D{$currentRow}", $stat->duration_seconds);
+                    $sum_duration_seconds += $stat->duration_seconds;
+
                     $sheet->setCellValue("E{$currentRow}", $stat->card->rate_per_minute);
                     $sheet->setCellValue("F{$currentRow}", $stat->amount_without_vat);
                     $sheet->setCellValue("G{$currentRow}", $stat->vat_rate);
@@ -356,6 +387,10 @@ class CarwashInvoiceService
                     $currentRow++;
                 }
             }
+
+            $sheet->setCellValue("C16", round($sum_duration_seconds/60) ?? 0);
+            $sheet->setCellValue("C17", round($sum_duration_seconds/60) ?? 0);
+
 
             // Totals
             $sheet->setCellValue("C{$currentRow}", "ИТОГО:");
@@ -404,7 +439,6 @@ class CarwashInvoiceService
 
     private function convertToWords($inn, $stripkop = false): array|string|null
     {
-        // ... ваш существующий код без изменений ...
         $nol = 'ноль';
         $str[100] = ['', 'сто', 'двести', 'триста', 'четыреста', 'пятьсот', 'шестьсот', 'семьсот', 'восемьсот', 'девятьсот'];
         $str[11] = ['', 'десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать', 'шестнадцать', 'семнадцать', 'восемнадцать', 'девятнадцать', 'двадцать'];
