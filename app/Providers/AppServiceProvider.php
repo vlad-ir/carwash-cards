@@ -21,10 +21,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Лимитер для отправки счетов: 30 писем в час
-        RateLimiter::for('invoice-emails', function ($job) {
-            $maxPerHour = config('mail.invoice_email_limit_per_hour', 30);
-            return Limit::perHour($maxPerHour)->by('invoice-emails');
-        });
+        //
     }
 }

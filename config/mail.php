@@ -19,7 +19,22 @@ return [
     'send_mail_duplicate_buh' => env('SEND_MAIL_DUPLICATE_BUH', true),
     'mail_duplicate_address' => env('MAIL_DUPLICATE_ADDRESS', ''),
 
-    'invoice_email_limit_per_hour' => env('MAIL_INVOICE_EMAIL_LIMIT_PER_HOUR', 30),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Yandex Rate Limiting
+    |--------------------------------------------------------------------------
+    |
+    | These settings control the rate limiting for Yandex SMTP to avoid
+    | "Too many requests" errors. Adjust based on your Yandex plan limits.
+    |
+    */
+
+    'yandex_rate_limit' => [
+        'emails_per_batch' => (int) env('YANDEX_EMAILS_PER_BATCH', 10),
+        'delay_between_emails' => (int) env('YANDEX_DELAY_BETWEEN_EMAILS', 60),
+        'delay_after_batch' => (int) env('YANDEX_DELAY_AFTER_BATCH', 3600),
+    ],
 
     /*
     |--------------------------------------------------------------------------
