@@ -23,7 +23,8 @@ class SendCarwashInvoice implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 1;
+    // ВАЖНО: Много попыток, т.к. release() увеличивает attempts в БД
+    public int $tries = 1000;
     public int $backoff = 0;
 
     protected CarwashClient $client;
@@ -32,7 +33,7 @@ class SendCarwashInvoice implements ShouldQueue
     protected bool $isDuplicate;
     protected string $recipientEmail;
 
-    // Rate limit settings из config (читаем один раз при создании)
+    // Rate limit settings из config
     protected int $emailsPerBatch;
     protected int $delayBetweenEmails;
     protected int $delayAfterBatch;
@@ -58,6 +59,9 @@ class SendCarwashInvoice implements ShouldQueue
         $this->emailsPerBatch = config('mail.yandex_rate_limit.emails_per_batch', 10);
         $this->delayBetweenEmails = config('mail.yandex_rate_limit.delay_between_emails', 60);
         $this->delayAfterBatch = config('mail.yandex_rate_limit.delay_after_batch', 3600);
+
+        // Указываем очередь через метод (не через свойство!)
+        $this->onQueue('emails');
     }
 
     /**
@@ -84,17 +88,20 @@ class SendCarwashInvoice implements ShouldQueue
 
         // 2. Проверяем rate limit (пачки писем)
         $rateLimitKey = 'yandex_email_rate_limit';
-        $emailsSentInBatch = Cache::get($rateLimitKey, 0);
-        $batchStartTime = Cache::get($rateLimitKey . '_start_time');
+        $batchStartTimeKey = $rateLimitKey . '_start_time';
+        $lastEmailTimeKey = 'yandex_last_email_time';
+
+        $emailsSentInBatch = (int) Cache::get($rateLimitKey, 0);
+        $batchStartTime = Cache::get($batchStartTimeKey);
 
         if ($batchStartTime === null) {
-            Cache::put($rateLimitKey . '_start_time', now()->timestamp, now()->addHours(2));
+            Cache::put($batchStartTimeKey, now()->timestamp, now()->addHours(2));
             $batchStartTime = now()->timestamp;
         }
 
         // Если отправили лимит писем — ждём паузу между пачками
         if ($emailsSentInBatch >= $this->emailsPerBatch) {
-            $elapsedSinceBatchStart = now()->timestamp - $batchStartTime;
+            $elapsedSinceBatchStart = now()->timestamp - (int) $batchStartTime;
 
             if ($elapsedSinceBatchStart < $this->delayAfterBatch) {
                 $waitTime = $this->delayAfterBatch - $elapsedSinceBatchStart;
@@ -110,14 +117,14 @@ class SendCarwashInvoice implements ShouldQueue
 
             // Начинаем новую пачку
             Cache::put($rateLimitKey, 0, now()->addHours(2));
-            Cache::put($rateLimitKey . '_start_time', now()->timestamp, now()->addHours(2));
+            Cache::put($batchStartTimeKey, now()->timestamp, now()->addHours(2));
             $emailsSentInBatch = 0;
         }
 
         // 3. Проверяем интервал между письмами
-        $lastEmailTime = Cache::get('yandex_last_email_time');
+        $lastEmailTime = Cache::get($lastEmailTimeKey);
         if ($lastEmailTime !== null) {
-            $timeSinceLastEmail = now()->timestamp - $lastEmailTime;
+            $timeSinceLastEmail = now()->timestamp - (int) $lastEmailTime;
 
             if ($timeSinceLastEmail < $this->delayBetweenEmails) {
                 $waitTime = $this->delayBetweenEmails - $timeSinceLastEmail;
@@ -149,7 +156,7 @@ class SendCarwashInvoice implements ShouldQueue
 
             // Обновляем счётчики rate limit
             Cache::increment($rateLimitKey);
-            Cache::put('yandex_last_email_time', now()->timestamp, now()->addHours(2));
+            Cache::put($lastEmailTimeKey, now()->timestamp, now()->addHours(2));
 
             Log::info("Invoice email sent successfully.", [
                 'recipient' => $this->recipientEmail,
@@ -229,7 +236,7 @@ class SendCarwashInvoice implements ShouldQueue
      */
     public function failed(Exception $exception): void
     {
-        Log::critical("Invoice email job failed (fatal).", [
+        Log::critical("Invoice email job failed after all retries.", [
             'client_id' => $this->client->id,
             'invoice_id' => $this->invoice->id,
             'is_duplicate' => $this->isDuplicate,
