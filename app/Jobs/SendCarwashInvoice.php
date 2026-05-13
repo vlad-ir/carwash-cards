@@ -151,6 +151,7 @@ class SendCarwashInvoice implements ShouldQueue
 
             if (!$this->isDuplicate) {
                 $this->invoice->sent_at = now();
+                $this->invoice->sent_to_email_at = now();
                 $this->invoice->save();
             }
 
